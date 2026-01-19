@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: academyc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "123"
+      POSTGRES_DB: academyc_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d academyc_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # NestJS Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: academyc-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:123@postgres:5432/academyc_db"
+      JWT_SECRET: "super-secret-jwt-key-change-in-production-12345"
+      JWT_EXPIRATION: "7d"
+      PORT: "4000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - /app/dist
+    networks:
+      - app-network
+    depends_on:
+      - postgres
+    command: sh -c "until pg_isready -h postgres -U postgres -d academyc_db; do echo 'waiting for postgres...'; sleep 2; done; npx prisma migrate deploy && npm run start:dev"
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: academyc-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:4000
+      NEXTAUTH_SECRET: "super-secret-nextauth-key-change-in-production-67890"
+      NEXTAUTH_URL: http://localhost:3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    networks:
+      - app-network
+    depends_on:
+      - backend
+    command: npm run dev
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
