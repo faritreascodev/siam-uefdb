@@ -1,0 +1,347 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums for MVP Auth
+enum UserStatus {
+  PENDIENTE_APROBACION
+  ACTIVO
+  BLOQUEADO
+  RECHAZADO
+}
+
+enum Parentesco {
+  PADRE
+  MADRE
+  ABUELO_ABUELA
+  TIO_TIA
+  TUTOR_LEGAL
+}
+
+// User model with authentication and role relationship
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed password with bcrypt
+  firstName String?
+  lastName  String?
+  isActive  Boolean  @default(true) // Deprecated in favor of status, keep for backward compatibility
+  
+  // New fields for MVP Auth
+  cedula        String?     @unique
+  telefono      String?
+  direccion     String?
+  parentesco    Parentesco?
+  status        UserStatus  @default(PENDIENTE_APROBACION)
+  
+  // Approval tracking
+  approvedBy    String?
+  approvedAt    DateTime?
+  rejectionNote String?
+
+  // Password Recovery (Option B)
+  tempPassword       String?
+  mustChangePassword Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Many-to-Many relationship with Role
+  roles     UserRole[]
+  
+  // One-to-Many relationship with Recovery Requests
+  recoveryRequests PasswordRecoveryRequest[]
+  
+  // Admission Module Relations
+  applications  Application[]
+  notifications Notification[]
+  assignedApplications Application[] @relation("AssignedApplications")
+  processedApplications Application[] @relation("ProcessedApplications")
+
+  @@index([email])
+  @@map("users")
+}
+
+// Role model for RBAC (Role-Based Access Control)
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g., 'user', 'superadmin', 'moderator'
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Many-to-Many relationship with User
+  users       UserRole[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+// Join table for User-Role many-to-many relationship
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// Password Recovery Requests (Option B)
+model PasswordRecoveryRequest {
+  id          String    @id @default(uuid())
+  userId      String
+  cedula      String
+  email       String
+  motivo      String?
+  status      String    @default("PENDIENTE") // PENDIENTE, APROBADA, RECHAZADA
+  
+  resolvedBy  String?
+  resolvedAt  DateTime?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@map("password_recovery_requests")
+}
+
+// ========================================
+// ADMISSION MODULE
+// ========================================
+
+// Enums for Admission
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CURSILLO_SCHEDULED    // Cursillo programado (solo 8vo y 1ero BGU)
+  CURSILLO_APPROVED     // Cursillo aprobado
+  CURSILLO_REJECTED     // Cursillo no aprobado
+  REQUIRES_CORRECTION
+  APPROVED
+  PAYMENT_VALIDATED   // Pago de matrícula validado (NUEVO)
+  MATRICULATED        // Estudiante matriculado con paralelo asignado (NUEVO)
+  REJECTED
+}
+
+enum CursilloResult {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Gender {
+  M
+  F
+}
+
+enum Shift {
+  MORNING
+  AFTERNOON
+}
+
+enum DocumentType {
+  STUDENT_ID
+  REPRESENTATIVE_ID
+  STUDENT_PHOTO
+  GRADE_CERTIFICATE
+  UTILITY_BILL
+}
+
+enum NotificationType {
+  APPLICATION_SUBMITTED
+  APPLICATION_DRAFT_SAVED
+  CORRECTION_REQUIRED
+  APPLICATION_APPROVED
+  APPLICATION_REJECTED
+  APPLICATION_UNDER_REVIEW
+  DOCUMENT_REQUIRED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+// Application (Solicitud de Admisión)
+model Application {
+  id                String            @id @default(uuid())
+  status            ApplicationStatus @default(DRAFT)
+  submittedAt       DateTime?
+  
+  // Datos del Estudiante
+  studentFirstName  String?
+  studentLastName   String?
+  studentCedula     String?           @unique
+  studentBirthDate  DateTime?
+  studentBirthPlace Json?             // { country, province, city }
+  studentGender     Gender?
+  studentNationality String?          // NUEVO: Nacionalidad
+  studentAddress    String?
+  studentSector     String?
+  studentPhone      String?
+  studentEmail      String?
+  
+  // Datos Médicos
+  bloodType         String?
+  hasDisability     Boolean           @default(false)
+  disabilityDetail  String?
+  needsSpecialCare  Boolean           @default(false)
+  specialCareDetail String?
+  
+  // Datos Académicos
+  gradeLevel        String?
+  shift             Shift?
+  specialty         String?           // Solo para Bachillerato (Ciencias, Técnico, etc.)
+  previousSchool    String?
+  lastYearAverage   Decimal?
+  hasRepeatedYear   Boolean           @default(false)
+  repeatedYearDetail String?
+  
+  // Datos Familiares (JSON para flexibilidad)
+  fatherData        Json?             // { names, cedula, phone, email, occupation, ... }
+  motherData        Json?
+  representativeData Json?            // { names, cedula, relationship, ... }
+  
+  // Documentos
+  documents         ApplicationDocument[]
+  
+  // Relación con el Apoderado (usuario que crea la solicitud)
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Asignación a Directivo (para escalamiento)
+  assignedToId      String?
+  assignedTo        User?             @relation("AssignedApplications", fields: [assignedToId], references: [id])
+  assignedAt        DateTime?
+  
+  // Secretaria que procesó la solicitud
+  processedById     String?
+  processedBy       User?             @relation("ProcessedApplications", fields: [processedById], references: [id])
+  processedAt       DateTime?
+  
+  // Cursillo (solo para 8vo y 1ero BGU)
+  cursilloScheduled Boolean           @default(false)
+  cursilloDate      DateTime?
+  cursilloResult    CursilloResult    @default(PENDING)
+  cursilloNotes     String?           // Observaciones del cursillo
+  
+  // Ideario UEFDB
+  acceptedIdeario   Boolean           @default(false)
+  acceptedAt        DateTime?
+  
+  // Asignación de Paralelo (para control de cupos específicos)
+  assignedParallel  String?           // Ej: "A", "B", "Unico"
+  
+  // Observaciones del Admin
+  adminNotes        String?
+  rejectionReason   String?
+  correctionRequest String?
+  internalComments  Json?             // NUEVO: [{ userId, userName, comment, createdAt }]
+  
+  // Notificaciones relacionadas
+  notifications     Notification[]
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([assignedToId])
+  @@map("applications")
+}
+
+// Documentos de la Solicitud
+model ApplicationDocument {
+  id             String       @id @default(uuid())
+  applicationId  String
+  application    Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  
+  documentType   DocumentType
+  fileName       String
+  fileUrl        String       // Ruta en storage
+  fileSize       Int          // bytes
+  mimeType       String       // application/pdf, image/jpeg, etc.
+  
+  uploadedAt     DateTime     @default(now())
+
+  @@index([applicationId])
+  @@map("application_documents")
+}
+
+// Sistema de Notificaciones In-App
+model Notification {
+  id            String               @id @default(uuid())
+  userId        String
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type          NotificationType
+  priority      NotificationPriority @default(NORMAL)
+  title         String
+  message       String
+  
+  // Relación opcional con la solicitud
+  applicationId String?
+  application   Application?         @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  
+  // Estado de lectura
+  isRead        Boolean              @default(false)
+  readAt        DateTime?
+  
+  createdAt     DateTime             @default(now())
+  expiresAt     DateTime?
+
+  @@index([userId])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+
+// ========================================
+// QUOTA MANAGEMENT MODULE
+// ========================================
+
+model AdmissionQuota {
+  id           String   @id @default(uuid())
+  
+  // Configuración
+  level        String   // Ej: "Inicial 1 (3 años)", "1ero EGB"
+  parallel     String   // Ej: "Único", "A", "B"
+  shift        String   // "Matutina" / "Vespertina"
+  specialty    String?  // Ej: "Ciencias", "Técnico Informática"
+  
+  // Cupos
+  totalQuota   Int      // Cupos totales configurados
+  
+  // Año lectivo
+  academicYear String   @default("2026-2027")
+  
+  // Auditoría
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?
+  
+  // Índice único para evitar duplicados
+  @@unique([level, parallel, shift, specialty, academicYear], name: "quotaIdentifier")
+  @@map("admission_quotas")
+}
