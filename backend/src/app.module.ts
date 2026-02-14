@@ -25,7 +25,6 @@ import { ExternalApisModule } from './external-apis/external-apis.module';
     NotificationsModule,
     UploadsModule,
     QuotasModule,
-    QuotasModule,
     InstitutionsModule,
     ReportsModule,
     ExternalApisModule,
