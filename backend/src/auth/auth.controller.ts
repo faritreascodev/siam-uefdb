@@ -63,6 +63,6 @@ export class AuthController {
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Test endpoint for superadmin access' })
   async adminOnly() {
-    return { message: 'This endpoint is only for superadmins' };
+    return { message: 'Este endpoint es solo para superadministradores' };
   }
 }

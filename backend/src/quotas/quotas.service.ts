@@ -163,7 +163,7 @@ export class QuotasService {
       }
     }
 
-    return { message: `Seeding completed. Created ${createdCount} new configurations.` };
+    return { message: `Proceso de inicialización completado. Se crearon ${createdCount} nuevas configuraciones.` };
   }
 
   /**
