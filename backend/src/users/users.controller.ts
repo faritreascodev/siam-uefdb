@@ -129,7 +129,7 @@ export class UsersController {
   @Patch(':id/approve')
   @Roles('superadmin', 'admin')
   @ApiOperation({ summary: 'Approve pending user' })
-  @ApiResponse({ status: 200, description: 'User approved and guardian role assigned' })
+  @ApiResponse({ status: 200, description: 'Usuario aprobado y rol de apoderado asignado' })
   approveUser(@Param('id') id: string) {
     return this.usersService.approveUser(id);
   }

@@ -28,7 +28,7 @@ export default function Home() {
           <h3 className="font-semibold mb-2">Credenciales de Prueba:</h3>
           <div className="space-y-2 text-sm">
             <p><strong>Admin:</strong> admin@academyc.com / Admin123!</p>
-            <p><strong>Usuario:</strong> guardian@academyc.com / Guardian123!</p>
+            <p><strong>Usuario:</strong> apoderado@academyc.com / Apoderado123!</p>
           </div>
         </div>
       </div>

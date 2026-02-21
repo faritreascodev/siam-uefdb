@@ -59,13 +59,14 @@ export class AuthService {
       },
     });
 
-    // 5. Asignar rol 'guardian' por defecto (con estado inactivo)
-    const guardianRole = await this.prisma.role.findUnique({ where: { name: 'guardian' } });
-    if (guardianRole) {
-      await this.prisma.userRole.create({
+    // 5. Asignar rol 'apoderado' por defecto (con estado inactivo)
+    const apoderadoRole = await this.prisma.role.findUnique({ where: { name: 'apoderado' } });
+    if (apoderadoRole) {
+      await this.prisma.userRole.create(
+{
         data: {
           userId: newUser.id,
-          roleId: guardianRole.id,
+          roleId: apoderadoRole.id,
         },
       });
     }

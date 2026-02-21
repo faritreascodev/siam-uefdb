@@ -283,12 +283,12 @@ export class UsersService {
       },
     });
 
-    // 2. Assign 'guardian' role automatically
-    const guardianRole = await this.prisma.role.findUnique({ where: { name: 'guardian' } });
-    if (guardianRole) {
+    // 2. Assign 'apoderado' role automatically
+    const apoderadoRole = await this.prisma.role.findUnique({ where: { name: 'apoderado' } });
+    if (apoderadoRole) {
        await this.prisma.userRole.upsert({
-         where: { userId_roleId: { userId: id, roleId: guardianRole.id } },
-         create: { userId: id, roleId: guardianRole.id },
+         where: { userId_roleId: { userId: id, roleId: apoderadoRole.id } },
+         create: { userId: id, roleId: apoderadoRole.id },
          update: {},
        });
     }

@@ -8,11 +8,11 @@ async function main() {
 
   // 1. Crear roles por defecto
   const rolesToCreate = [
-    { name: 'guardian', description: 'Legal Guardian (Apoderado)' },
-    { name: 'secretary', description: 'Administrative Staff (Secretaria)' },
-    { name: 'principal', description: 'School Principal (Directivo)' },
-    { name: 'admin', description: 'System Administrator (Superadmin)' },
-    { name: 'user', description: 'Regular User' },
+    { name: 'apoderado', description: 'Apoderado o Representante Legal' },
+    { name: 'secretary', description: 'Personal Administrativo (Secretaria)' },
+    { name: 'principal', description: 'Directivo de la Institución' },
+    { name: 'admin', description: 'Administrador del Sistema' },
+    { name: 'user', description: 'Usuario Regular' },
   ];
 
   const createdRoles: Record<string, string> = {};
@@ -67,8 +67,8 @@ async function main() {
   console.log(`✅ Admin user created: ${adminEmail}`);
 
   // 3. Crear Usuario Regular (Apoderado Demo)
-  const userEmail = 'guardian@academyc.com';
-  const hashedUserPassword = await bcrypt.hash('Guardian123!', 10);
+  const userEmail = 'apoderado@academyc.com';
+  const hashedUserPassword = await bcrypt.hash('Apoderado123!', 10);
 
   const regularUser = await prisma.user.upsert({
     where: { email: userEmail },
@@ -76,7 +76,7 @@ async function main() {
     create: {
       email: userEmail,
       password: hashedUserPassword,
-      firstName: 'Guardian',
+      firstName: 'Apoderado',
       lastName: 'Demo',
       status: 'ACTIVO',
       isActive: true,
@@ -84,18 +84,18 @@ async function main() {
     },
   });
 
-  // Asignar rol de guardian
+  // Asignar rol de apoderado
   await prisma.userRole.upsert({
     where: {
       userId_roleId: {
         userId: regularUser.id,
-        roleId: createdRoles['guardian'],
+        roleId: createdRoles['apoderado'],
       },
     },
     update: {},
     create: {
       userId: regularUser.id,
-      roleId: createdRoles['guardian'],
+      roleId: createdRoles['apoderado'],
     },
   });
 
@@ -195,10 +195,10 @@ async function main() {
   console.log('   Email: admin@academyc.com');
   console.log('   Password: Admin123!');
   console.log('   Role: admin (Superadmin)\n');
-  console.log('👤 Regular User (Guardian):');
-  console.log('   Email: guardian@academyc.com');
-  console.log('   Password: Guardian123!');
-  console.log('   Role: guardian\n');
+  console.log('👤 Regular User (Apoderado):');
+  console.log('   Email: apoderado@academyc.com');
+  console.log('   Password: Apoderado123!');
+  console.log('   Role: apoderado\n');
   console.log('=================================\n');
 }
 

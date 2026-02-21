@@ -14,7 +14,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center text-xs text-gray-500">
           <p>Credenciales de prueba:</p>
           <p className="mt-1">Admin: admin@academyc.com / Admin123!</p>
-          <p>Usuario: guardian@academyc.com / Guardian123!</p>
+          <p>Usuario: apoderado@academyc.com / Apoderado123!</p>
         </div>
       <div className="mt-4 text-center text-sm">
           <p className="text-gray-600">

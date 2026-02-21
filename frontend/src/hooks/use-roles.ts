@@ -7,7 +7,7 @@ export function useRoles() {
   const isSuperAdmin = () => roles.includes("superadmin");
   const isAdmin = () => roles.includes("admin");
   const isDirectivo = () => roles.includes("principal"); // Frontend UI term 'directivo' maps to backend 'principal'
-  const isGuardian = () => roles.includes("guardian"); // Backend role is 'guardian'
+  const isApoderado = () => roles.includes("apoderado"); // Backend role is 'apoderado'
   const isSecretary = () => roles.includes("secretary");
   const isUser = () => roles.includes("user");
   // Admin access: superadmin OR admin
@@ -18,7 +18,7 @@ export function useRoles() {
     isSuperAdmin,
     isAdmin,
     isDirectivo,
-    isGuardian,
+    isApoderado,
     isSecretary,
     isUser,
     hasAdminAccess,

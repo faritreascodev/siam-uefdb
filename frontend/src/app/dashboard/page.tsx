@@ -8,7 +8,7 @@ import { useRoles } from "@/hooks/use-roles";
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { hasAdminAccess, isGuardian, isDirectivo, isSecretary, roles } = useRoles();
+  const { hasAdminAccess, isApoderado, isDirectivo, isSecretary, roles } = useRoles();
 
   if (status === "loading") {
     return <div className="flex min-h-screen items-center justify-center">Cargando...</div>;
@@ -60,8 +60,8 @@ export default function DashboardPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-                {/* Portal de Apoderado - Para guardians */}
-                {isGuardian() && (
+                {/* Portal de Apoderado */}
+                {isApoderado() && (
                   <Link href="/apoderado" className="block border-2 border-green-300 rounded-lg p-4 hover:shadow-md transition-shadow bg-green-50 cursor-pointer">
                     <h4 className="font-semibold mb-2">📋 Portal de Apoderado</h4>
                     <p className="text-sm text-gray-600">Gestionar solicitudes de admisión de tus representados</p>
@@ -108,7 +108,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Mensaje informativo si no tiene acceso a nada especial */}
-              {!hasAdminAccess() && !isGuardian() && !isDirectivo() && !isSecretary() && (
+              {!hasAdminAccess() && !isApoderado() && !isDirectivo() && !isSecretary() && (
                 <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                   <p className="text-sm text-yellow-800">
                     ℹ️ Tu cuenta está activa pero no tienes roles asignados. Contacta al administrador.
