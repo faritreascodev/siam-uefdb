@@ -145,7 +145,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
       } else {
         // Create mode
         if (!values.password) {
-            form.setError("password", { message: "Password is required for new users" })
+            form.setError("password", { message: "La contraseña es requerida para nuevos usuarios" })
             setLoading(false)
             return
         }
@@ -175,9 +175,9 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit User" : "Create New User"}</DialogTitle>
+          <DialogTitle>{user ? "Editar Usuario" : "Crear Nuevo Usuario"}</DialogTitle>
           <DialogDescription>
-            {user ? "Update user details here." : "Enter the details for the new user."}
+            {user ? "Actualiza los detalles del usuario aquí." : "Ingresa los detalles del nuevo usuario."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -213,9 +213,9 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
               name="firstName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First Name</FormLabel>
+                  <FormLabel>Nombre</FormLabel>
                   <FormControl>
-                    <Input placeholder="John" {...field} />
+                    <Input placeholder="Juan" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -226,9 +226,9 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
               name="lastName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last Name</FormLabel>
+                  <FormLabel>Apellido</FormLabel>
                   <FormControl>
-                    <Input placeholder="Doe" {...field} />
+                    <Input placeholder="Pérez" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -241,7 +241,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
               name="roleName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Role</FormLabel>
+                  <FormLabel>Rol</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     defaultValue={field.value}

@@ -103,9 +103,9 @@ export function RoleDialog({ user, open, onOpenChange, onSuccess }: RoleDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Manage Roles</DialogTitle>
+          <DialogTitle>Gestionar Roles</DialogTitle>
           <DialogDescription>
-            Assign or remove roles for {user.email}
+            Asignar o remover roles para {user.email}
           </DialogDescription>
         </DialogHeader>
         
@@ -125,7 +125,7 @@ export function RoleDialog({ user, open, onOpenChange, onSuccess }: RoleDialogPr
             <div className="flex gap-2">
                 <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
                     <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select role to add" />
+                        <SelectValue placeholder="Seleccionar rol para agregar" />
                     </SelectTrigger>
                     <SelectContent>
                         {availableRoles.map(role => (
@@ -136,7 +136,7 @@ export function RoleDialog({ user, open, onOpenChange, onSuccess }: RoleDialogPr
                     </SelectContent>
                 </Select>
                 <Button onClick={handleAddRole} disabled={loading || !selectedRoleId}>
-                    Add
+                    Agregar
                 </Button>
             </div>
         </div>

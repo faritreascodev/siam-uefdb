@@ -137,31 +137,31 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset Password</AlertDialogTitle>
+            <AlertDialogTitle>Restablecer Contraseña</AlertDialogTitle>
             <AlertDialogDescription>
               {tempPassword ? (
                  <div className="mt-4 p-4 bg-muted rounded-md text-center">
-                    <p className="font-medium text-foreground">New Temporary Password:</p>
+                    <p className="font-medium text-foreground">Nueva Contraseña Temporal:</p>
                     <p className="text-2xl font-bold tracking-widest my-2 select-all">{tempPassword}</p>
-                    <p className="text-xs text-muted-foreground">Please share this with the user immediately.</p>
+                    <p className="text-xs text-muted-foreground">Por favor comparte esto con el usuario inmediatamente.</p>
                  </div>
               ) : (
-                "Are you sure you want to reset this user's password? A temporary password will be generated."
+                "¿Estás seguro de que quieres restablecer la contraseña de este usuario? Se generará una contraseña temporal."
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             {!tempPassword && (
-                <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
             )}
             {tempPassword ? (
                 <AlertDialogAction onClick={() => {
                     setResetDialogOpen(false)
                     setTempPassword(null)
-                }}>Close</AlertDialogAction>
+                }}>Cerrar</AlertDialogAction>
             ) : (
                 <AlertDialogAction onClick={handleResetPassword} disabled={loading}>
-                    {loading ? "Resetting..." : "Confirm Reset"}
+                    {loading ? "Restableciendo..." : "Confirmar Restablecimiento"}
                 </AlertDialogAction>
             )}
           </AlertDialogFooter>
