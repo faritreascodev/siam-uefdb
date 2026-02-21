@@ -28,16 +28,16 @@ export class AuthService {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        throw new ConflictException('Email already in use');
+        throw new ConflictException('El email ya está en uso');
       }
       if (existingUser.cedula === cedula) {
-        throw new ConflictException('Cedula already registered');
+        throw new ConflictException('La cédula ya está registrada');
       }
     }
 
     // 2. Validar Cédula Ecuatoriana
     if (!validateCedulaEcuatoriana(cedula)) {
-      throw new BadRequestException('Invalid Ecuadorian ID (Cédula)');
+      throw new BadRequestException('Cédula ecuatoriana inválida');
     }
 
     // 3. Hash password
@@ -73,7 +73,7 @@ export class AuthService {
 
     // Retornamos mensaje de éxito y ID, sin token porque requiere aprobación.
     return {
-      message: 'Registration successful. Your account is pending approval by an administrator.',
+      message: 'Registro exitoso. Tu cuenta está pendiente de aprobación por un administrador.',
       userId: newUser.id,
     };
   }
@@ -94,13 +94,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
     // Verificar si el usuario está activo o pendiente
@@ -109,12 +109,12 @@ export class AuthService {
     }
     
     if (user.status === 'BLOQUEADO' || user.status === 'RECHAZADO') {
-      throw new UnauthorizedException('Account blocked or rejected.');
+      throw new UnauthorizedException('Cuenta bloqueada o rechazada.');
     }
 
     // Legacy check
     if (!user.isActive) {
-      throw new UnauthorizedException('User is inactive');
+      throw new UnauthorizedException('Usuario inactivo');
     }
 
     // Extraer nombres de roles
@@ -170,7 +170,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Usuario no encontrado');
     }
 
     const roleNames = user.roles.map((ur) => ur.role.name);
@@ -191,7 +191,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('No user found with provided Cedula and Email');
+      throw new BadRequestException('No se encontró usuario con la cédula y email proporcionados');
     }
 
     // 2. Crear solicitud
@@ -205,7 +205,7 @@ export class AuthService {
     });
 
     return {
-      message: 'Recovery request submitted. An administrator will review it shortly.',
+      message: 'Solicitud de recuperación enviada. Un administrador la revisará en breve.',
     };
   }
 
@@ -222,6 +222,6 @@ export class AuthService {
        },
      });
 
-     return { message: 'Password updated successfully' };
+     return { message: 'Contraseña actualizada exitosamente' };
   }
 }
