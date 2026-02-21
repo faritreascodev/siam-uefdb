@@ -128,7 +128,7 @@ export class UsersService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    const { email, password, firstName, lastName } = updateUserDto;
+    const { email, password, firstName, lastName, cedula } = updateUserDto;
 
     // Check if user exists
     const user = await this.prisma.user.findUnique({ where: { id } });
@@ -144,6 +144,15 @@ export class UsersService {
         throw new ConflictException('Email already exists');
       }
       data.email = email;
+    }
+
+    // Validar y actualizar cédula si se proporciona
+    if (cedula && cedula !== user.cedula) {
+      const cedulaExists = await this.prisma.user.findUnique({ where: { cedula } });
+      if (cedulaExists) {
+        throw new ConflictException('La cédula ya está registrada en el sistema');
+      }
+      data.cedula = cedula;
     }
 
     if (password) {
