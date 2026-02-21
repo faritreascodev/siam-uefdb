@@ -266,8 +266,8 @@ export default function AdminAdmisionesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Todas</SelectItem>
-                    <SelectItem value="MORNING">Matutina</SelectItem>
-                    <SelectItem value="AFTERNOON">Vespertina</SelectItem>
+                    <SelectItem value="MATUTINA">Matutina</SelectItem>
+                    <SelectItem value="VESPERTINA">Vespertina</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

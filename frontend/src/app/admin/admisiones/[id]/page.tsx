@@ -361,7 +361,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
           </CardHeader>
           <CardContent className="space-y-4">
             <InfoRow label="Grado Solicitado" value={gradeLabel} />
-            <InfoRow label="Jornada" value={application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'} />
+            <InfoRow label="Jornada" value={application.shift === 'MATUTINA' ? 'Matutina' : 'Vespertina'} />
             <InfoRow label="Escuela Anterior" value={application.previousSchool} />
             <InfoRow label="Promedio Último Año" value={application.lastYearAverage?.toString()} />
             <InfoRow label="Ha Repetido Año" value={application.hasRepeatedYear ? `Sí - ${application.repeatedYearDetail}` : 'No'} />

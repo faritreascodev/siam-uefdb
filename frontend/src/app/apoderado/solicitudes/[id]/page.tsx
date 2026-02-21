@@ -204,7 +204,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoItem label="Grado Solicitado" value={gradeLabel} />
-            <InfoItem label="Jornada" value={application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'} />
+            <InfoItem label="Jornada" value={application.shift === 'MATUTINA' ? 'Matutina' : 'Vespertina'} />
             <InfoItem label="Institución Anterior" value={application.previousSchool} />
             <InfoItem label="Promedio Último Año" value={application.lastYearAverage?.toString()} />
           </div>

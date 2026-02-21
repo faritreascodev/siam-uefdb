@@ -86,8 +86,8 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 <SelectValue placeholder="Seleccionar jornada" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="MORNING">Matutina</SelectItem>
-                <SelectItem value="AFTERNOON">Vespertina</SelectItem>
+                <SelectItem value="MATUTINA">Matutina</SelectItem>
+                <SelectItem value="VESPERTINA">Vespertina</SelectItem>
               </SelectContent>
             </Select>
             {quotaInfo && (

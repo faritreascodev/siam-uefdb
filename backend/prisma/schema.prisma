@@ -154,8 +154,8 @@ enum Gender {
 }
 
 enum Shift {
-  MORNING
-  AFTERNOON
+  MATUTINA
+  VESPERTINA
 }
 
 enum DocumentType {
