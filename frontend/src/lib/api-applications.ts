@@ -210,3 +210,46 @@ export async function getGlobalStats(token: string) {
   if (!res.ok) throw new Error('Error al obtener estadísticas globales');
   return res.json();
 }
+
+// ==== CURSILLOS ====
+
+export async function scheduleCursillo(
+  token: string,
+  id: string,
+  cursilloDate: string
+): Promise<Application> {
+  const res = await fetch(`${API_URL}/applications/admin/${id}/cursillo-schedule`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ cursilloDate }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Error al programar cursillo');
+  }
+  return res.json();
+}
+
+export async function recordCursilloResult(
+  token: string,
+  id: string,
+  result: 'APPROVED' | 'REJECTED',
+  notes?: string
+): Promise<Application> {
+  const res = await fetch(`${API_URL}/applications/admin/${id}/cursillo-result`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ result, notes }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Error al registrar resultado del cursillo');
+  }
+  return res.json();
+}

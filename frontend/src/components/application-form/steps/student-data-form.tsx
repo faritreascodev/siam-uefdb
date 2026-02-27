@@ -45,7 +45,10 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
         onChange({
           studentFirstName: result.firstName || '',
           studentLastName: result.lastName || '',
-          // Add other fields if API returns them
+          studentGender: result.gender as Gender,
+          studentBirthDate: result.birthDate ? new Date(result.birthDate).toISOString() : undefined,
+          studentNationality: result.nationality || 'ECUATORIANA',
+          studentAddress: result.address || '',
         });
         toast.success('Datos encontrados y completados');
       } else {

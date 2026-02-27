@@ -301,7 +301,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
               htmlFor="ideario"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              He leído y acepto el <a href="#" className="text-blue-600 underline">Ideario Institucional</a> y el Código de Convivencia.
+              He leído y acepto el <a href="/ideario-institucional.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ideario Institucional</a> y el Código de Convivencia.
             </label>
           </div>
 

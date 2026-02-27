@@ -78,15 +78,36 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
         {/* Country Selector */}
         <div className="space-y-2">
           <Label>País</Label>
-          <Select value={country} onValueChange={handleCountryChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Seleccionar País" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ECUADOR">Ecuador</SelectItem>
-              <SelectItem value="OTRO">Otro</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-2">
+            <Select 
+              value={isEcuador ? 'ECUADOR' : 'OTRO'} 
+              onValueChange={(val) => {
+                if(val === 'ECUADOR') handleCountryChange('ECUADOR');
+                else handleCountryChange('OTRO');
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar País" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ECUADOR">Ecuador</SelectItem>
+                <SelectItem value="OTRO">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            {!isEcuador && (
+              <Input 
+                value={country === 'OTRO' ? '' : country} 
+                onChange={(e) => {
+                  const newCountry = e.target.value;
+                  setCountry(newCountry);
+                  // Don't reset other fields here, just update country
+                  onChange({ country: newCountry, province, canton, parish: '' });
+                }} 
+                placeholder="Especifique el País" 
+              />
+            )}
+          </div>
         </div>
 
         {isEcuador ? (
@@ -153,7 +174,8 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
                 value={province} 
                 onChange={(e) => {
                   setProvince(e.target.value);
-                  onChange({ ...value, country: 'OTRO', province: e.target.value });
+                  onChange({ country, province: e.target.value, canton, parish: '' });
+                  // Note: pass current 'country' from state, which might be typed by user
                 }} 
               />
             </div>
@@ -163,7 +185,7 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
                 value={canton} 
                 onChange={(e) => {
                   setCanton(e.target.value);
-                  onChange({ ...value, country: 'OTRO', canton: e.target.value });
+                  onChange({ country, province, canton: e.target.value, parish: '' });
                 }} 
               />
             </div>

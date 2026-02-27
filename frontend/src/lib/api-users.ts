@@ -45,6 +45,24 @@ export async function getUsers(token: string, role?: string): Promise<User[]> {
   return res.json();
 }
 
+// Helper to handle response
+async function handleResponse(res: Response, errorMessage: string) {
+  if (!res.ok) {
+    try {
+      const error = await res.json();
+      throw new Error(error.message || errorMessage);
+    } catch (e: any) {
+        // If parsing json fails or if header is not json
+        // Check if we already threw the error with message
+        if (e.message !== errorMessage && e.message) {
+            throw e;
+        }
+        throw new Error(errorMessage);
+    }
+  }
+  return res.json();
+}
+
 export async function createUser(token: string, data: CreateUserRequest): Promise<User> {
   const res = await fetch(`${API_URL}/users`, {
     method: 'POST',
@@ -54,11 +72,7 @@ export async function createUser(token: string, data: CreateUserRequest): Promis
     },
     body: JSON.stringify(data),
   });
-  if (!res.ok) {
-     const error = await res.json();
-     throw new Error(error.message || 'Failed to create user');
-  }
-  return res.json();
+  return handleResponse(res, 'Failed to create user');
 }
 
 export async function updateUser(token: string, id: string, data: UpdateUserRequest): Promise<User> {
@@ -70,8 +84,7 @@ export async function updateUser(token: string, id: string, data: UpdateUserRequ
     },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error('Failed to update user');
-  return res.json();
+  return handleResponse(res, 'Failed to update user');
 }
 
 export async function toggleUserStatus(token: string, id: string, isActive: boolean): Promise<User> {
@@ -82,23 +95,17 @@ export async function toggleUserStatus(token: string, id: string, isActive: bool
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error(`Failed to ${endpoint} user`);
-  return res.json();
+  return handleResponse(res, `Failed to ${endpoint} user`);
 }
 
 export async function assignRole(token: string, userId: string, roleId: string): Promise<User> {
-    // Need to implement role fetching first to get Role IDs?
-    // Review UsersService: assignRole takes roleId.
-    // Frontend might need to fetch roles.
-    // For now keeping it simple.
   const res = await fetch(`${API_URL}/users/${userId}/roles/${roleId}`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error('Failed to assign role');
-  return res.json();
+  return handleResponse(res, 'Failed to assign role');
 }
 
 export async function removeRole(token: string, userId: string, roleId: string): Promise<User> {
@@ -108,8 +115,7 @@ export async function removeRole(token: string, userId: string, roleId: string):
        Authorization: `Bearer ${token}`,
     },
   });
-  if (!res.ok) throw new Error('Failed to remove role');
-  return res.json();
+  return handleResponse(res, 'Failed to remove role');
 }
 
 export async function resetPassword(token: string, userId: string): Promise<{ message: string, tempPassword?: string }> {
