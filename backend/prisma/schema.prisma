@@ -154,8 +154,8 @@ enum Gender {
 }
 
 enum Shift {
-  MATUTINA
-  VESPERTINA
+  MORNING
+  AFTERNOON
 }
 
 enum DocumentType {
@@ -174,6 +174,7 @@ enum NotificationType {
   APPLICATION_REJECTED
   APPLICATION_UNDER_REVIEW
   DOCUMENT_REQUIRED
+  MATRICULATED
 }
 
 enum NotificationPriority {
@@ -262,6 +263,9 @@ model Application {
   // Notificaciones relacionadas
   notifications     Notification[]
   
+  // Contactos adicionales (Máximo 3 por app)
+  extraContacts     ExtraContact[]
+  
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -344,4 +348,27 @@ model AdmissionQuota {
   // Índice único para evitar duplicados
   @@unique([level, parallel, shift, specialty, academicYear], name: "quotaIdentifier")
   @@map("admission_quotas")
+}
+
+// ========================================
+// ADDITIONAL CONTACTS
+// ========================================
+
+model ExtraContact {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  
+  cedula        String
+  firstName     String
+  lastName      String
+  email         String?     // Opcional
+  phone         String
+  relationship  String      // Ej: "Abuelo/a", "Tío/a", "Hermano/a", "Otro"
+  
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([applicationId])
+  @@map("extra_contacts")
 }

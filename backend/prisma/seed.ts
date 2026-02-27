@@ -8,11 +8,11 @@ async function main() {
 
   // 1. Crear roles por defecto
   const rolesToCreate = [
-    { name: 'apoderado', description: 'Apoderado o Representante Legal' },
-    { name: 'secretary', description: 'Personal Administrativo (Secretaria)' },
-    { name: 'principal', description: 'Directivo de la Institución' },
-    { name: 'admin', description: 'Administrador del Sistema' },
-    { name: 'user', description: 'Usuario Regular' },
+    { name: 'apoderado', description: 'Legal Guardian (Apoderado)' },
+    { name: 'secretary', description: 'Administrative Staff (Secretaria)' },
+    { name: 'principal', description: 'School Principal (Directivo)' },
+    { name: 'admin', description: 'System Administrator (Superadmin)' },
+    { name: 'user', description: 'Regular User' },
   ];
 
   const createdRoles: Record<string, string> = {};
@@ -68,7 +68,7 @@ async function main() {
 
   // 3. Crear Usuario Regular (Apoderado Demo)
   const userEmail = 'apoderado@academyc.com';
-  const hashedUserPassword = await bcrypt.hash('Apoderado123!', 10);
+  const hashedUserPassword = await bcrypt.hash('Guardian123!', 10);
 
   const regularUser = await prisma.user.upsert({
     where: { email: userEmail },
@@ -76,7 +76,7 @@ async function main() {
     create: {
       email: userEmail,
       password: hashedUserPassword,
-      firstName: 'Apoderado',
+      firstName: 'Guardian',
       lastName: 'Demo',
       status: 'ACTIVO',
       isActive: true,
@@ -197,7 +197,7 @@ async function main() {
   console.log('   Role: admin (Superadmin)\n');
   console.log('👤 Regular User (Apoderado):');
   console.log('   Email: apoderado@academyc.com');
-  console.log('   Password: Apoderado123!');
+  console.log('   Password: Guardian123!');
   console.log('   Role: apoderado\n');
   console.log('=================================\n');
 }
