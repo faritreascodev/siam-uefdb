@@ -2,7 +2,7 @@
 
 Sistema fullstack moderno con autenticación robusta, RBAC, y arquitectura containerizada.
 
-## 🏗️ Stack Tecnológico
+## Stack Tecnológico
 
 ### Frontend
 - **Framework**: Next.js 14+ (App Router)
@@ -21,7 +21,7 @@ Sistema fullstack moderno con autenticación robusta, RBAC, y arquitectura conta
 - **Containerización**: Docker + Docker Compose
 - **Arquitectura**: Monorepo (Frontend + Backend)
 
-## 📁 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 academyc-system/
@@ -31,7 +31,7 @@ academyc-system/
 └── README.md
 ```
 
-## 🚀 Inicio Rápido
+## Inicio Rápido
 
 ### Prerrequisitos
 
@@ -49,7 +49,7 @@ cd academyc-system
 # Configurar Backend
 cd backend
 cp .env.example .env
-# Editar .env y cambiar JWT_SECRET
+# Editar .env and cambiar JWT_SECRET
 
 # Configurar Frontend
 cd ../frontend
@@ -105,7 +105,7 @@ curl -X POST http://localhost:4000/auth/register \
   }'
 ```
 
-## 🔧 Desarrollo Local (sin Docker)
+## Desarrollo Local (sin Docker)
 
 ### Backend
 
@@ -146,7 +146,7 @@ npx shadcn-ui@latest init
 npm run dev
 ```
 
-## 🔐 Autenticación y RBAC
+## Autenticación y RBAC
 
 ### Roles Disponibles
 
@@ -184,7 +184,7 @@ Headers: { Authorization: Bearer <token> }
 - `/dashboard` - Requiere autenticación
 - `/admin/*` - Requiere rol 'superadmin'
 
-## 🐳 Comandos Docker Útiles
+## Comandos Docker Útiles
 
 ```bash
 # Ver logs
@@ -200,7 +200,7 @@ docker-compose restart backend
 # Detener todos los servicios
 docker-compose down
 
-# Detener y eliminar volúmenes (⚠️ borra datos)
+# Detener y eliminar volúmenes (borra datos)
 docker-compose down -v
 
 # Reconstruir sin caché
@@ -211,7 +211,7 @@ docker exec -it academyc-backend sh
 docker exec -it academyc-frontend sh
 ```
 
-## 📦 Scripts Disponibles
+## Scripts Disponibles
 
 ### Backend
 
@@ -227,11 +227,11 @@ docker exec -it academyc-frontend sh
 - `npm run start` - Iniciar producción
 - `npm run lint` - Linter
 
-## 🔒 Seguridad
+## Seguridad
 
 ### Variables Sensibles
 
-**⚠️ IMPORTANTE**: Antes de desplegar a producción:
+**IMPORTANTE**: Antes de desplegar a producción:
 
 1. Generar `JWT_SECRET` único:
    ```bash
@@ -254,7 +254,7 @@ docker exec -it academyc-frontend sh
 - ✅ Usar variables de entorno para secretos
 - ✅ Mantener dependencias actualizadas
 
-## 🗄️ Base de Datos
+## Base de Datos
 
 ### Modelos Prisma
 
@@ -277,11 +277,11 @@ npx prisma migrate deploy
 # Abrir Prisma Studio (GUI)
 npx prisma studio
 
-# Resetear base de datos (⚠️ desarrollo)
+# Resetear base de datos (desarrollo)
 npx prisma migrate reset
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Backend (NestJS)
 
@@ -299,7 +299,7 @@ cd frontend
 npm run test
 ```
 
-## 📚 Documentación Adicional
+## Documentación Adicional
 
 - [Prisma Docs](https://www.prisma.io/docs)
 - [NestJS Docs](https://docs.nestjs.com)
@@ -308,7 +308,7 @@ npm run test
 - [TailwindCSS](https://tailwindcss.com/docs)
 - [Shadcn/ui](https://ui.shadcn.com)
 
-## 🤝 Contribuir
+## Contribuir
 
 1. Fork el proyecto
 2. Crear rama feature (`git checkout -b feature/AmazingFeature`)
@@ -316,14 +316,14 @@ npm run test
 4. Push a rama (`git push origin feature/AmazingFeature`)
 5. Abrir Pull Request
 
-## 📄 Licencia
+## Licencia
 
 MIT License - ver archivo LICENSE para detalles
 
-## 👥 Soporte
+## Soporte
 
 Para preguntas o problemas, abrir un issue en el repositorio.
 
 ---
 
-**Desarrollado con ❤️ usando Next.js, NestJS y Docker**
+**Desarrollado por Farit**
