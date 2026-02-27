@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { signOut } from "next-auth/react"
 import { useRoles } from "@/hooks/use-roles"
-import { Home, Users, Settings, LogOut, FileText } from "lucide-react"
+import { Home, Users, Settings, LogOut, FileText, Calendar, Monitor } from "lucide-react"
 
 // ... imports
 
@@ -29,6 +29,12 @@ export function AdminSidebar() {
       show: hasAdminAccess() || isSecretary(),
     },
     {
+      title: "Cursillos",
+      href: "/admin/cursillos",
+      icon: Calendar,
+      show: hasAdminAccess() || isSecretary(),
+    },
+    {
       title: "Usuarios",
       href: "/admin/users",
       icon: Users,
@@ -39,6 +45,12 @@ export function AdminSidebar() {
       href: "/admin/settings",
       icon: Settings,
       show: hasAdminAccess(),
+    },
+    {
+      title: "Monitor Cursos",
+      href: "/admin/cursos",
+      icon: Monitor,
+      show: hasAdminAccess() || isSecretary(),
     },
   ]
 

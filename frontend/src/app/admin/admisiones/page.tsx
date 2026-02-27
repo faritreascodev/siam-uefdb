@@ -34,6 +34,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  GraduationCap,
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -126,7 +127,7 @@ export default function AdminAdmisionesPage() {
       </div>
 
       {/* Métricas */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -164,6 +165,16 @@ export default function AdminAdmisionesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats?.approved || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Matriculadas</CardTitle>
+            <GraduationCap className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700">{stats?.matriculated || 0}</div>
           </CardContent>
         </Card>
 
@@ -266,8 +277,8 @@ export default function AdminAdmisionesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Todas</SelectItem>
-                    <SelectItem value="MATUTINA">Matutina</SelectItem>
-                    <SelectItem value="VESPERTINA">Vespertina</SelectItem>
+                    <SelectItem value="MORNING">Matutina</SelectItem>
+                    <SelectItem value="AFTERNOON">Vespertina</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -317,7 +328,6 @@ export default function AdminAdmisionesPage() {
                     <TableHead>Grado / Esp.</TableHead>
                     <TableHead>Fecha Envío</TableHead>
                     <TableHead>Estado</TableHead>
-                    <TableHead>Asignado</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -346,12 +356,6 @@ export default function AdminAdmisionesPage() {
                         <Badge className={STATUS_COLORS[app.status]}>
                           {STATUS_LABELS[app.status]}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {app.assignedTo 
-                          ? `${app.assignedTo.firstName || ''} ${app.assignedTo.lastName || ''}`.trim() || 'Sí'
-                          : <span className="text-muted-foreground">-</span>
-                        }
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="outline" size="sm" asChild>

@@ -35,7 +35,8 @@ import {
   Eye, 
   MoreHorizontal,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Users
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -344,6 +345,14 @@ function ApplicationActions({
             </Link>
           </DropdownMenuItem>
         )}
+
+        {/* --- NUEVO: Contactos Extra --- */}
+        <DropdownMenuItem asChild>
+          <Link href={`/apoderado/solicitudes/${application.id}/contactos`}>
+            <Users className="mr-2 h-4 w-4" />
+            Contactos Extra
+          </Link>
+        </DropdownMenuItem>
         
         {canDelete && (
           <DropdownMenuItem 

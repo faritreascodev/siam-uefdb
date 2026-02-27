@@ -51,9 +51,9 @@ export default function UsersPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
         <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" /> Add User
+          <Plus className="mr-2 h-4 w-4" /> Agregar Usuario
         </Button>
       </div>
 
@@ -64,7 +64,7 @@ export default function UsersPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center p-8">Loading users...</div>
+        <div className="flex justify-center p-8">Cargando usuarios...</div>
       ) : error ? (
         <div className="text-red-500 p-4">{error}</div>
       ) : (

@@ -101,7 +101,7 @@ export default function NominaReportPage() {
         <h2 className="text-lg">Nómina de Estudiantes - Año Lectivo 2026-2027</h2>
         <div className="mt-2 text-sm flex justify-center gap-4">
           <span><strong>Nivel:</strong> {gradeLevel || 'Todos'}</span>
-          <span><strong>Jornada:</strong> {shift || 'Todas'}</span>
+          <span><strong>Jornada:</strong> {shift === 'MORNING' ? 'Matutina' : shift === 'AFTERNOON' ? 'Vespertina' : 'Todas'}</span>
           {specialty && <span><strong>Especialidad:</strong> {specialty}</span>}
           {parallel && <span><strong>Paralelo:</strong> {parallel}</span>}
         </div>
@@ -122,12 +122,12 @@ export default function NominaReportPage() {
                   <SelectValue placeholder="Seleccionar Nivel" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="OCTAVO">8vo EGB</SelectItem>
-                  <SelectItem value="NOVENO">9no EGB</SelectItem>
-                  <SelectItem value="DECIMO">10mo EGB</SelectItem>
-                  <SelectItem value="PRIMERO_BACHILLERATO">1ero Bachillerato</SelectItem>
-                  <SelectItem value="SEGUNDO_BACHILLERATO">2do Bachillerato</SelectItem>
-                  <SelectItem value="TERCERO_BACHILLERATO">3er Bachillerato</SelectItem>
+                  <SelectItem value="8vo_basico">8vo EGB</SelectItem>
+                  <SelectItem value="9no_basico">9no EGB</SelectItem>
+                  <SelectItem value="10mo_basico">10mo EGB</SelectItem>
+                  <SelectItem value="1ro_bachillerato">1ero Bachillerato</SelectItem>
+                  <SelectItem value="2do_bachillerato">2do Bachillerato</SelectItem>
+                  <SelectItem value="3ro_bachillerato">3er Bachillerato</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -139,8 +139,8 @@ export default function NominaReportPage() {
                   <SelectValue placeholder="Seleccionar Jornada" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MATUTINA">Matutina</SelectItem>
-                  <SelectItem value="VESPERTINA">Vespertina</SelectItem>
+                  <SelectItem value="MORNING">Matutina</SelectItem>
+                  <SelectItem value="AFTERNOON">Vespertina</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -153,11 +153,8 @@ export default function NominaReportPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="MECANIZADO">Mecanizado</SelectItem>
-                  <SelectItem value="ELECTRICIDAD">Electricidad</SelectItem>
-                  <SelectItem value="AUTOMOTRIZ">Automotriz</SelectItem>
-                  <SelectItem value="MECATRONICA">Mecatrónica</SelectItem>
-                  <SelectItem value="BGU">BGU</SelectItem>
+                  <SelectItem value="CIENCIAS">BGU Ciencias</SelectItem>
+                  <SelectItem value="TECNICO_INFORMATICA">BGU Técnico Informática</SelectItem>
                 </SelectContent>
               </Select>
             </div>

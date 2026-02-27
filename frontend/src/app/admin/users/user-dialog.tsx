@@ -37,20 +37,24 @@ import { createUser, updateUser, getRoles } from "@/lib/api-users"
 import { useSession } from "next-auth/react"
 
 const userSchema = z.object({
-  email: z.string().email(),
-  cedula: z.string().min(10, "Min 10 characters").optional(),
-  firstName: z.string().min(1, "Required"),
-  lastName: z.string().min(1, "Required"),
+  email: z.string().email("Debe ser un correo electrónico válido"),
+  cedula: z.string()
+    .length(10, "La cédula debe tener exactamente 10 dígitos")
+    .regex(/^[0-9]+$/, "La cédula solo debe contener números")
+    .optional()
+    .or(z.literal('')),
+  firstName: z.string().min(1, "Requerido"),
+  lastName: z.string().min(1, "Requerido"),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
-  roleName: z.string().min(1, "Role is required"),
+  roleName: z.string().min(1, "El rol es requerido"),
 }).refine((data) => {
   if (data.password && data.password !== data.confirmPassword) {
     return false;
   }
   return true;
 }, {
-  message: "Passwords do not match",
+  message: "Las contraseñas no coinciden",
   path: ["confirmPassword"],
 });
 
@@ -177,7 +181,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
         <DialogHeader>
           <DialogTitle>{user ? "Editar Usuario" : "Crear Nuevo Usuario"}</DialogTitle>
           <DialogDescription>
-            {user ? "Actualiza los detalles del usuario aquí." : "Ingresa los detalles del nuevo usuario."}
+            {user ? "Actualice los detalles del usuario aquí." : "Ingrese los detalles del nuevo usuario."}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -228,7 +232,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
                 <FormItem>
                   <FormLabel>Apellido</FormLabel>
                   <FormControl>
-                    <Input placeholder="Pérez" {...field} />
+                    <Input placeholder="Perez" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -250,7 +254,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select a role" />
+                        <SelectValue placeholder="Seleccionar un rol" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -271,7 +275,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{user ? "New Password (Optional)" : "Password"}</FormLabel>
+                  <FormLabel>{user ? "Nueva Contraseña (Opcional)" : "Contraseña"}</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -305,7 +309,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
               name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel>Confirmar Contraseña</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
@@ -336,7 +340,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess, children }: Us
 
             <DialogFooter>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : "Save changes"}
+                {loading ? "Guardando..." : "Guardar cambios"}
               </Button>
             </DialogFooter>
           </form>

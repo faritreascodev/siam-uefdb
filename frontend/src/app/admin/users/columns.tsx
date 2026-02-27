@@ -26,11 +26,11 @@ export function getColumns(onSuccess: () => void): ColumnDef<User>[] {
     },
     {
       accessorKey: "firstName",
-      header: "First Name",
+      header: "Nombre",
     },
     {
       accessorKey: "lastName",
-      header: "Last Name",
+      header: "Apellido",
     },
     {
       accessorKey: "cedula",
@@ -52,12 +52,12 @@ export function getColumns(onSuccess: () => void): ColumnDef<User>[] {
     },
     {
       accessorKey: "isActive",
-      header: "Status",
+      header: "Estado",
       cell: ({ row }) => {
           const isActive = row.getValue("isActive") as boolean
           return (
               <Badge variant={isActive ? "default" : "destructive"}>
-                  {isActive ? "Active" : "Inactive"}
+                  {isActive ? "Activo" : "Inactivo"}
               </Badge>
           )
       }

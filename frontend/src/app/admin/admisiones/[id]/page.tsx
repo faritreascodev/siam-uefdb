@@ -361,10 +361,21 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
           </CardHeader>
           <CardContent className="space-y-4">
             <InfoRow label="Grado Solicitado" value={gradeLabel} />
-            <InfoRow label="Jornada" value={application.shift === 'MATUTINA' ? 'Matutina' : 'Vespertina'} />
+            <InfoRow label="Jornada" value={application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'} />
             <InfoRow label="Escuela Anterior" value={application.previousSchool} />
             <InfoRow label="Promedio Último Año" value={application.lastYearAverage?.toString()} />
             <InfoRow label="Ha Repetido Año" value={application.hasRepeatedYear ? `Sí - ${application.repeatedYearDetail}` : 'No'} />
+            {['MATRICULATED'].includes(application.status) && application.assignedParallel && (
+              <>
+                <Separator className="my-2" />
+                <div className="flex justify-between items-center bg-purple-50 p-2 rounded-md border border-purple-100">
+                  <span className="text-purple-900 font-medium">Asignación Matrícula</span>
+                  <span className="font-bold text-purple-700 bg-purple-200 px-2 py-1 rounded-md text-sm">
+                    Paralelo {application.assignedParallel}
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -696,70 +707,6 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
           </CardContent>
         </Card>
 
-        {/* Asignación */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" />
-              Asignación
-            </CardTitle>
-            <CardDescription>Asignar solicitud a un directivo para revisión</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {application.assignedTo ? (
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <p className="text-sm text-muted-foreground">Asignado a:</p>
-                <p className="font-medium text-blue-700">
-                  {application.assignedTo.firstName || ''} {application.assignedTo.lastName || ''}
-                </p>
-                {application.assignedAt && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(application.assignedAt), "d 'de' MMMM, yyyy", { locale: es })}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No asignada</p>
-            )}
-            
-            <Separator />
-            
-            <div className="space-y-2">
-              <Label>Directivo</Label>
-              <div className="flex gap-2">
-                <Select
-                  value={directivoId}
-                  onValueChange={setDirectivoId}
-                  disabled={actionLoading || loadingDirectivos}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={loadingDirectivos ? "Cargando..." : "Seleccionar directivo"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {directivos.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.firstName} {user.lastName}
-                      </SelectItem>
-                    ))}
-                    {directivos.length === 0 && !loadingDirectivos && (
-                       <SelectItem value="none" disabled>No se encontraron directivos</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                
-                <Button
-                  onClick={handleAssign}
-                  disabled={!directivoId || actionLoading}
-                >
-                  Asignar
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Seleccione el directivo para asignar esta solicitud
-              </p>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

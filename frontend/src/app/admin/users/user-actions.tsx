@@ -91,31 +91,31 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
               navigator.clipboard.writeText(user.id)
               toast.success("ID copiado al portapapeles")
             }}
           >
-            Copy User ID
+            Copiar ID de Usuario
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            Edit User
+            Editar Usuario
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setRoleOpen(true)}>
-            Manage Roles
+            Gestionar Roles
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setResetDialogOpen(true)}>
-            Reset Password
+            Restablecer Contraseña
           </DropdownMenuItem>
           <DropdownMenuItem 
             className={user.isActive ? "text-red-600 focus:text-red-600" : "text-green-600 focus:text-green-600"}
             onClick={handleToggleStatus}
             disabled={loading}
           >
-            {user.isActive ? "Deactivate" : "Activate"}
+            {user.isActive ? "Desactivar" : "Activar"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -143,10 +143,10 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
                  <div className="mt-4 p-4 bg-muted rounded-md text-center">
                     <p className="font-medium text-foreground">Nueva Contraseña Temporal:</p>
                     <p className="text-2xl font-bold tracking-widest my-2 select-all">{tempPassword}</p>
-                    <p className="text-xs text-muted-foreground">Por favor comparte esto con el usuario inmediatamente.</p>
+                    <p className="text-xs text-muted-foreground">Por favor comparta esto con el usuario inmediatamente.</p>
                  </div>
               ) : (
-                "¿Estás seguro de que quieres restablecer la contraseña de este usuario? Se generará una contraseña temporal."
+                "¿Está seguro de que desea restablecer la contraseña de este usuario? Se generará una contraseña temporal."
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -160,9 +160,9 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
                     setTempPassword(null)
                 }}>Cerrar</AlertDialogAction>
             ) : (
-                <AlertDialogAction onClick={handleResetPassword} disabled={loading}>
+                <Button onClick={handleResetPassword} disabled={loading}>
                     {loading ? "Restableciendo..." : "Confirmar Restablecimiento"}
-                </AlertDialogAction>
+                </Button>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>
