@@ -247,12 +247,12 @@ docker exec -it academyc-frontend sh
 
 ### Buenas Prácticas
 
-- ✅ Nunca commitear archivos `.env`
-- ✅ Usar HTTPS en producción
-- ✅ Implementar rate limiting en endpoints públicos
-- ✅ Validar y sanitizar todas las entradas
-- ✅ Usar variables de entorno para secretos
-- ✅ Mantener dependencias actualizadas
+- Nunca commitear archivos `.env`
+- Usar HTTPS en producción
+- Implementar rate limiting en endpoints públicos
+- Validar y sanitizar todas las entradas
+- Usar variables de entorno para secretos
+- Mantener dependencias actualizadas
 
 ## Base de Datos
 
