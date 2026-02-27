@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "SIAM - UEFDB",
-  description: "Sistema Integral de Admisiones y Matrículas",
+  description: "Sistema Institucional de Admisión y Matrículas",
 };
 
 export default function RootLayout({

@@ -1,8 +1,8 @@
-# SIAM - UEFDB: Sistema Integral de Admisiones y Matrículas
+# SIAM - UEFDB: Sistema Institucional de Admisión y Matrículas
 
 ## Presentacion
 
-SIAM (Sistema Integral de Admisiones y Matrículas) es una plataforma empresarial diseñada especificamente para la Unidad Educativa Fiscomisional Don Bosco. Este sistema centraliza y optimiza los procesos criticos de ingreso estudiantil, gestion de disponibilidad y generacion de reportes administrativos.
+SIAM (Sistema Institucional de Admisión y Matrículas) es una plataforma diseñada especificamente para la Unidad Educativa Fiscomisional Don Bosco. Este sistema centraliza y optimiza los procesos criticos de ingreso estudiantil, gestion de disponibilidad y generacion de reportes administrativos.
 
 La plataforma ha sido construida bajo estandares modernos de desarrollo, garantizando una arquitectura escalable, segura y con una experiencia de usuario de alto nivel tanto para el personal administrativo como para los apoderados.
 
