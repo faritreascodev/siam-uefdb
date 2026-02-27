@@ -129,10 +129,10 @@ export default function AsignadasPage() {
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pendientes de Acción</CardTitle>
-            <MessageSquare className="h-4 w-4 text-blue-500" />
+            <MessageSquare className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-primary">
               {applications.filter(a => ['SUBMITTED', 'UNDER_REVIEW'].includes(a.status)).length}
             </div>
           </CardContent>

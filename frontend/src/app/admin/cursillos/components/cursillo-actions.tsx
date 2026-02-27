@@ -74,7 +74,7 @@ export function CursilloActions({ application, onSuccess }: CursilloActionsProps
       {(!application.cursilloScheduled || application.status === 'UNDER_REVIEW') && (
         <Dialog open={openSchedule} onOpenChange={setOpenSchedule}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="text-blue-600">
+            <Button variant="outline" size="sm" className="text-primary">
               <Calendar className="mr-2 h-4 w-4" />
               Programar
             </Button>

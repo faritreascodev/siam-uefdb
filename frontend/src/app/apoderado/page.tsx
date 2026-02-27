@@ -151,10 +151,10 @@ export default function ApoderadoDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Enviadas / En Revisión</CardTitle>
-            <Send className="h-4 w-4 text-blue-500" />
+            <Send className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats?.submitted || 0}</div>
+            <div className="text-2xl font-bold text-primary">{stats?.submitted || 0}</div>
           </CardContent>
         </Card>
 

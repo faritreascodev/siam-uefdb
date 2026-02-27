@@ -141,10 +141,10 @@ export default function AdminAdmisionesPage() {
         <Card className="border-blue-200 bg-blue-50/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-blue-500" />
+            <Clock className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{(stats?.submitted || 0) + (stats?.underReview || 0)}</div>
+            <div className="text-2xl font-bold text-primary">{(stats?.submitted || 0) + (stats?.underReview || 0)}</div>
           </CardContent>
         </Card>
 

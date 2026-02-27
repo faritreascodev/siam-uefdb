@@ -79,7 +79,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
           <CardTitle className="text-sm font-medium">
             Tasa Aprobación
           </CardTitle>
-          <Percent className="h-4 w-4 text-blue-500" />
+          <Percent className="h-4 w-4 text-primary" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.approvalRate}%</div>

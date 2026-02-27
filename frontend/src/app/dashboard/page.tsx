@@ -142,7 +142,7 @@ export default function DashboardPage() {
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-slate-50/50">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3 text-base">
-                        <div className="p-2 bg-blue-100 text-blue-700 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <div className="p-2 bg-blue-100 text-primary rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
                           <Users className="h-5 w-5" />
                         </div>
                         Gestión de Usuarios
@@ -202,10 +202,10 @@ export default function DashboardPage() {
               {/* Secretaria - Solicitudes recibidas */}
               {isSecretary() && (
                 <Link href="/admin/admisiones" className="group">
-                  <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-blue-500/50 group-hover:bg-blue-50/10">
+                  <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-blue-50/10">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-3 text-base">
-                        <div className="p-2 bg-blue-100 text-blue-700 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        <div className="p-2 bg-blue-100 text-primary rounded-lg group-hover:bg-primary group-hover:text-white transition-colors">
                           <Inbox className="h-5 w-5" />
                         </div>
                         Bandeja de Entrada
