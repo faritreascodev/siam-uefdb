@@ -80,7 +80,7 @@ export function ForgotPasswordForm() {
             onChange={(e) => setCedula(e.target.value)}
             required
             disabled={isLoading}
-            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 border transition-all"
+            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-primary focus:ring-primary sm:text-sm bg-gray-50 border transition-all"
           />
         </div>
       </div>
@@ -98,7 +98,7 @@ export function ForgotPasswordForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
-            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 border transition-all"
+            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-primary focus:ring-primary sm:text-sm bg-gray-50 border transition-all"
           />
         </div>
       </div>
@@ -112,7 +112,7 @@ export function ForgotPasswordForm() {
       <button
         type="submit"
         disabled={isLoading || !cedula || !email}
-        className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        className="flex w-full justify-center rounded-md border border-transparent bg-primary py-3 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
         {isLoading ? (
           <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" />
@@ -122,7 +122,7 @@ export function ForgotPasswordForm() {
 
       <div className="text-center text-sm">
         <span className="text-gray-600">¿Recordaste tu contraseña? </span>
-        <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+        <Link href="/login" className="font-medium text-primary hover:text-primary">
           Volver al inicio de sesión
         </Link>
       </div>

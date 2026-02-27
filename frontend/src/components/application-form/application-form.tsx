@@ -293,7 +293,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
             <input
               type="checkbox"
               id="ideario"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               checked={acceptedIdeario}
               onChange={(e) => setAcceptedIdeario(e.target.checked)}
             />
@@ -301,7 +301,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
               htmlFor="ideario"
               className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
-              He leído y acepto el <a href="/ideario-institucional.pdf" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ideario Institucional</a> y el Código de Convivencia.
+              He leído y acepto el <a href="/ideario-institucional.pdf" target="_blank" rel="noopener noreferrer" className="text-primary underline">Ideario Institucional</a> y el Código de Convivencia.
             </label>
           </div>
 

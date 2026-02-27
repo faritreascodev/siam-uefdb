@@ -56,7 +56,7 @@ export function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
-            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 border transition-all"
+            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-primary focus:ring-primary sm:text-sm bg-gray-50 border transition-all"
           />
         </div>
       </div>
@@ -73,7 +73,7 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             required
             disabled={isLoading}
-            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-blue-500 focus:ring-blue-500 sm:text-sm bg-gray-50 border transition-all"
+            className="block w-full rounded-md border-gray-300 pl-4 py-3 focus:border-primary focus:ring-primary sm:text-sm bg-gray-50 border transition-all"
           />
         </div>
       </div>
@@ -84,7 +84,7 @@ export function LoginForm() {
             id="remember-me"
             name="remember-me"
             type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
             Recordarme
@@ -94,7 +94,7 @@ export function LoginForm() {
         <div className="text-sm">
           <Link
             href="/forgot-password"
-            className="font-medium text-blue-600 hover:text-blue-500"
+            className="font-medium text-primary hover:text-primary"
           >
             ¿Olvidaste tu contraseña?
           </Link>
@@ -110,7 +110,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="flex w-full justify-center rounded-md border border-transparent bg-blue-600 py-3 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+        className="flex w-full justify-center rounded-md border border-transparent bg-primary py-3 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
       >
         {isLoading ? (
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -123,7 +123,7 @@ export function LoginForm() {
 
       <div className="text-center text-sm">
         <span className="text-gray-600">¿No tienes una cuenta? </span>
-        <Link href="/register" className="font-medium text-blue-600 hover:text-blue-500">
+        <Link href="/register" className="font-medium text-primary hover:text-primary">
           Regístrate aquí
         </Link>
       </div>

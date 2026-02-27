@@ -195,7 +195,7 @@ function NotificationItem({
       <div className="flex gap-3">
         <div className={cn(
           "h-2 w-2 rounded-full mt-2 flex-shrink-0",
-          !notification.isRead ? "bg-blue-600" : "bg-gray-300"
+          !notification.isRead ? "bg-primary" : "bg-gray-300"
         )} />
         
         <div className="flex-1 space-y-1">
