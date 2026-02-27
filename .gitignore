@@ -29,7 +29,6 @@ dist/
 build/
 .next/
 out/
-*.tsbuildinfo
 
 # Logs
 logs/
@@ -53,12 +52,3 @@ coverage/
 # Misc
 .cache/
 .turbo/
-
-# Uploads (archivos de usuarios)
-backend/uploads/
-**/uploads/applications/
-
-# Lock files (usar pnpm-lock.yaml en su lugar)
-package-lock.json
-backend/package-lock.json
-frontend/package-lock.json

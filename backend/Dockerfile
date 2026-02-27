@@ -9,7 +9,7 @@ COPY package.json ./
 COPY prisma ./prisma/
 
 # Install dependencies
-RUN pnpm install
+RUN npm install
 
 # Generate Prisma Client
 RUN npx prisma generate
@@ -18,4 +18,4 @@ RUN npx prisma generate
 EXPOSE 4000
 
 # Start development server with hot reload
-CMD ["pnpm", "run", "start:dev"]
+CMD ["npm", "run", "start:dev"]
