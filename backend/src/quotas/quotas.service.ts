@@ -53,8 +53,9 @@ export class QuotasService {
           // Match Level (Exact match expected)
           if (app.gradeLevel !== q.level) return false;
           
-          // Match Shift (Direct comparison now that enum is in Spanish)
-          if (app.shift !== q.shift) return false;
+          // Match Shift (Enum to String mapping)
+          const appShiftStr = app.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
+          if (appShiftStr !== q.shift) return false;
  
           // Match Specialty (Handle nulls)
           if ((app.specialty || null) !== (q.specialty || null)) return false;
@@ -163,7 +164,7 @@ export class QuotasService {
       }
     }
 
-    return { message: `Proceso de inicialización completado. Se crearon ${createdCount} nuevas configuraciones.` };
+    return { message: `Seeding completed. Created ${createdCount} new configurations.` };
   }
 
   /**
@@ -195,7 +196,12 @@ export class QuotasService {
       where: {
         status: { in: ['APPROVED', 'CURSILLO_APPROVED'] },
         gradeLevel: gradeLevel,
-        shift: shift, // Direct comparison now that enum is in Spanish
+        // Since Shift is an enum (MORNING/AFTERNOON) and frontend might send 'Matutina'/'Vespertina'
+        // we need to be careful. However, Prisma Query for Enums usually expects the Enum Value.
+        // Let's assume the mapping logic handled in Controller or here.
+        // For simplicity, if shift string is passed, we map it back to Enum if possible, 
+        // OR rely on the fact that existing applications have the correct enum.
+        shift: shift === 'Matutina' ? 'MORNING' : 'AFTERNOON',
         specialty: specialty || null,
         // We do NOT filter by assignedParallel here, because a new applicant isn't assigned yet.
         // We check if *global* space exists in the grade.

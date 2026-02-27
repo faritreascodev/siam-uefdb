@@ -24,7 +24,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8)
   @Matches(/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).*$/, {
-    message: 'La contraseña debe contener mayúsculas, minúsculas y números'
+    message: 'Password must contain uppercase, lowercase, and number'
   })
   password: string;
 

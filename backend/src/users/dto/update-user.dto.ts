@@ -32,4 +32,9 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   lastName?: string;
+
+  @ApiPropertyOptional({ example: '0987654321' })
+  @IsString()
+  @IsOptional()
+  telefono?: string;
 }

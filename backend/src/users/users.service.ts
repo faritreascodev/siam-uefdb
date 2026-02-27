@@ -63,7 +63,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     const { password, ...result } = user;
@@ -74,31 +74,45 @@ export class UsersService {
   }
 
   async create(createUserDto: CreateUserDto) {
-    const { email, password, firstName, lastName, roleNames } = createUserDto;
+    const { email, password, firstName, lastName, roleNames, cedula } = createUserDto;
 
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
-      throw new ConflictException('El email ya existe');
+      throw new ConflictException('Email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     // Create user with ACTIVE status since it's created by admin
-    const user = await this.prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        status: 'ACTIVO',
-        isActive: true,
-        approvedAt: new Date(),
-      },
-    });
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email,
+          cedula,
+          password: hashedPassword,
+          firstName,
+          lastName,
+          status: 'ACTIVO',
+          isActive: true,
+          approvedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      if (error.code === 'P2002') {
+        if (error.meta?.target?.includes('cedula')) {
+          throw new ConflictException('La cédula ya está registrada en el sistema');
+        }
+        if (error.meta?.target?.includes('email')) {
+          throw new ConflictException('El correo electrónico ya está registrado');
+        }
+      }
+      throw error;
+    }
 
     // Assign roles (default to 'user' if none provided)
     const rolesToAssign = (roleNames && roleNames.length > 0) ? roleNames : ['user'];
@@ -133,7 +147,7 @@ export class UsersService {
     // Check if user exists
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     const data: any = { firstName, lastName };
@@ -141,12 +155,11 @@ export class UsersService {
     if (email && email !== user.email) {
       const emailExists = await this.prisma.user.findUnique({ where: { email } });
       if (emailExists) {
-        throw new ConflictException('El email ya existe');
+        throw new ConflictException('Email already exists');
       }
       data.email = email;
     }
 
-    // Validar y actualizar cédula si se proporciona
     if (cedula && cedula !== user.cedula) {
       const cedulaExists = await this.prisma.user.findUnique({ where: { cedula } });
       if (cedulaExists) {
@@ -170,7 +183,7 @@ export class UsersService {
   async toggleActive(id: string, isActive: boolean) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     const data: any = { isActive };
@@ -198,12 +211,12 @@ export class UsersService {
   async assignRole(id: string, roleId: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     const role = await this.prisma.role.findUnique({ where: { id: roleId } });
     if (!role) {
-      throw new NotFoundException(`Rol con ID ${roleId} no encontrado`);
+      throw new NotFoundException(`Role with ID ${roleId} not found`);
     }
 
     await this.prisma.userRole.upsert({
@@ -226,7 +239,7 @@ export class UsersService {
   async removeRole(id: string, roleId: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     // Check if user has this role
@@ -240,7 +253,7 @@ export class UsersService {
     });
 
     if (!userRole) {
-      throw new NotFoundException('Rol no asignado al usuario');
+      throw new NotFoundException('Role not assigned to user');
     }
 
     await this.prisma.userRole.delete({
@@ -270,7 +283,7 @@ export class UsersService {
 
   async approveUser(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+    if (!user) throw new NotFoundException('User not found');
 
     // 1. Activate user
     const updatedUser = await this.prisma.user.update({
@@ -323,14 +336,14 @@ export class UsersService {
       include: { user: true },
     });
     
-    if (!request) throw new NotFoundException('Solicitud no encontrada');
+    if (!request) throw new NotFoundException('Request not found');
 
     if (action === 'REJECT') {
       await this.prisma.passwordRecoveryRequest.update({
         where: { id: requestId },
         data: { status: 'RECHAZADO', resolvedAt: new Date() },
       });
-      return { message: 'Solicitud rechazada' };
+      return { message: 'Request rejected' };
     }
 
     // APPROVE -> Generate Temp Password
@@ -361,7 +374,7 @@ export class UsersService {
     });
 
     return { 
-      message: 'Contraseña temporal generada', 
+      message: 'Temporary password generated', 
       tempPassword: tempPassword,
     };
   }
@@ -369,7 +382,7 @@ export class UsersService {
   async resetPassword(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
-      throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      throw new NotFoundException(`User with ID ${id} not found`);
     }
 
     // Generate temp password (8 chars + Alphanumeric)
@@ -389,9 +402,9 @@ export class UsersService {
     });
 
     return { 
-      message: 'Contraseña restablecida exitosamente', 
+      message: 'Password reset successfully', 
       tempPassword: tempPassword,
-      instructions: 'Por favor comunica esta nueva contraseña temporal al usuario de forma segura.'
+      instructions: 'Please communicate this new temporary password to the user securely.'
     };
   }
 }

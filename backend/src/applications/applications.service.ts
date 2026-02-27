@@ -177,6 +177,8 @@ export class ApplicationsService {
       underReview: applications.filter(a => a.status === 'UNDER_REVIEW').length,
       requiresCorrection: applications.filter(a => a.status === 'REQUIRES_CORRECTION').length,
       approved: applications.filter(a => a.status === 'APPROVED').length,
+      paymentValidated: applications.filter(a => a.status === 'PAYMENT_VALIDATED').length,
+      matriculated: applications.filter(a => a.status === 'MATRICULATED').length,
       rejected: applications.filter(a => a.status === 'REJECTED').length,
     };
   }
@@ -496,30 +498,71 @@ export class ApplicationsService {
   // Verificar disponibilidad de cupos
   async checkQuota(gradeLevel: string, shift: string) {
     if (!gradeLevel || !shift) {
-      return { status: 'AVAILABLE', available: 30, total: 30 };
+      return { status: 'AVAILABLE', available: 0, total: 0, used: 0 };
     }
 
-    const QUOTA_LIMIT = 30; // Hardcoded limit per classroom/shift
+    const mapLevel = (level: string) => {
+      const mapping: Record<string, string> = {
+        'inicial_1': 'Inicial 1 (3 años)',
+        'inicial_2': 'Inicial 2 (4 años)',
+        '1ro_basico': '1ero EGB',
+        '2do_basico': '2do EGB',
+        '3ro_basico': '3ero EGB',
+        '4to_basico': '4to EGB',
+        '5to_basico': '5to EGB',
+        '6to_basico': '6to EGB',
+        '7mo_basico': '7mo EGB',
+        '8vo_basico': '8vo EGB',
+        '9no_basico': '9no EGB',
+        '10mo_basico': '10mo EGB',
+        '1ro_bachillerato': '1ero BGU',
+        '2do_bachillerato': '2do BGU',
+        '3ro_bachillerato': '3ero BGU',
+      };
+      return mapping[level] || level;
+    };
 
-    // Contar estudiantes aprobados en este grado y jornada
+    const mapShift = (s: string) => {
+      if (s === 'MORNING') return 'Matutina';
+      if (s === 'AFTERNOON') return 'Vespertina';
+      return s;
+    };
+
+    const mappedLevel = mapLevel(gradeLevel);
+    const mappedShift = mapShift(shift);
+
+    // Sum all quotas for this level and shift
+    const quotas = await this.prisma.admissionQuota.findMany({
+      where: {
+        level: mappedLevel,
+        shift: mappedShift,
+      }
+    });
+
+    const totalQuota = quotas.reduce((sum, q) => sum + q.totalQuota, 0);
+
+    // Contar estudiantes ocupando cupo
     const approvedCount = await this.prisma.application.count({
       where: {
         gradeLevel,
         shift: shift as Shift,
-        status: 'APPROVED',
+        status: {
+          in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_VALIDATED', 'MATRICULATED']
+        }
       },
     });
 
-    const available = Math.max(0, QUOTA_LIMIT - approvedCount);
+    const available = Math.max(0, totalQuota - approvedCount);
     
     let status = 'AVAILABLE';
-    if (available === 0) status = 'FULL';
+    if (totalQuota === 0) status = 'FULL';
+    else if (available === 0) status = 'FULL';
     else if (available <= 5) status = 'LIMITED';
 
     return {
       status, // AVAILABLE, LIMITED, FULL
       available,
-      total: QUOTA_LIMIT,
+      total: totalQuota,
       used: approvedCount
     };
   }
@@ -657,16 +700,77 @@ export class ApplicationsService {
       }
     });
 
+    const shiftStr = updated.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
+    const gradeStr = updated.gradeLevel || 'N/A';
+    const parallelStr = updated.assignedParallel || 'N/A';
+    const assignmentDetails = `Curso: ${gradeStr}, Jornada: ${shiftStr}, Paralelo: ${parallelStr}`;
+
     // Notify User
     await this.notificationsService.createForApplicationStatus(
       updated.userId,
       id,
       `${updated.studentFirstName} ${updated.studentLastName}`,
       // @ts-ignore
-      'MATRICULATED' // Necesitaremos agregar este tipo de notificacion o usar uno generico
+      'MATRICULATED',
+      assignmentDetails
     );
 
     return updated;
+  }
+
+  // === CURSILLOS ===
+  
+  // Programar cursillo
+  async scheduleCursillo(id: string, cursilloDate: string) {
+    const updatedApp = await this.prisma.application.update({
+      where: { id },
+      data: {
+        status: 'CURSILLO_SCHEDULED',
+        cursilloScheduled: true,
+        cursilloDate: new Date(cursilloDate),
+      },
+    });
+
+    // Notify User
+    await this.notificationsService.createForApplicationStatus(
+      updatedApp.userId,
+      id,
+      `${updatedApp.studentFirstName} ${updatedApp.studentLastName}`,
+      'APPLICATION_UNDER_REVIEW', // O uno específico de Cursillo si existiera
+      `Se ha programado un cursillo para el ${new Date(cursilloDate).toLocaleDateString('es-ES')}`
+    );
+
+    return updatedApp;
+  }
+
+  // Registrar resultado del cursillo
+  async recordCursilloResult(id: string, result: 'APPROVED' | 'REJECTED', notes?: string) {
+    const statusMap = {
+      APPROVED: 'CURSILLO_APPROVED',
+      REJECTED: 'CURSILLO_REJECTED'
+    };
+
+    const updatedApp = await this.prisma.application.update({
+      where: { id },
+      data: {
+        status: statusMap[result] as ApplicationStatus,
+        cursilloResult: result,
+        cursilloNotes: notes,
+      },
+    });
+
+    const resultMessage = result === 'APPROVED' ? 'Aprobado' : 'Rechazado';
+
+    // Notify User
+    await this.notificationsService.createForApplicationStatus(
+      updatedApp.userId,
+      id,
+      `${updatedApp.studentFirstName} ${updatedApp.studentLastName}`,
+      'APPLICATION_UNDER_REVIEW',
+      `El resultado de su cursillo ha sido registrado: ${resultMessage}. ${notes || ''}`
+    );
+
+    return updatedApp;
   }
 
   // Exportar admitidos CSV
@@ -740,6 +844,11 @@ export class ApplicationsService {
     ];
 
     const missingFields = requiredFields.filter(field => !application[field]);
+
+    const isBGU = ['1ero BGU', '2do BGU', '3ro BGU'].includes(application.gradeLevel || '');
+    if (isBGU && !application.specialty) {
+      missingFields.push('specialty');
+    }
 
     if (missingFields.length > 0) {
       throw new BadRequestException(

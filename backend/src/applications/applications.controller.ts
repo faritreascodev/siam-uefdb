@@ -237,4 +237,25 @@ export class ApplicationsController {
   ) {
     return this.applicationsService.assignParallel(id, parallel, req.user.id);
   }
+
+  // === GESTIÓN DE CURSILLOS ===
+  
+  @Post('admin/:id/cursillo-schedule')
+  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  scheduleCursillo(
+    @Param('id') id: string,
+    @Body('cursilloDate') cursilloDate: string,
+  ) {
+    return this.applicationsService.scheduleCursillo(id, cursilloDate);
+  }
+
+  @Post('admin/:id/cursillo-result')
+  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  recordCursilloResult(
+    @Param('id') id: string,
+    @Body('result') result: 'APPROVED' | 'REJECTED',
+    @Body('notes') notes?: string,
+  ) {
+    return this.applicationsService.recordCursilloResult(id, result, notes);
+  }
 }

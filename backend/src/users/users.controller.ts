@@ -1,5 +1,5 @@
 import { 
-  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Query 
+  Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Query, Request
 } from '@nestjs/common';
 import { 
   ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody 
@@ -25,6 +25,28 @@ export class UsersController {
   getRoles() {
     return this.usersService.findAllRoles();
   }
+
+  // --- Profile Endpoints ---
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile retrieved' })
+  getProfile(@Request() req: any) {
+    return this.usersService.findOne(req.user.id);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  updateProfile(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
+    // Evitar que el usuario actualice su propio rol o active/desactive su cuenta por esta ruta
+    const dto = updateUserDto as any;
+    delete dto.roleName;
+    delete dto.isActive;
+    return this.usersService.update(req.user.id, updateUserDto);
+  }
+
+  // --- External Endpoints ---
 
   @Get()
   @Roles('superadmin', 'admin', 'secretary', 'principal', 'directivo')
@@ -129,7 +151,7 @@ export class UsersController {
   @Patch(':id/approve')
   @Roles('superadmin', 'admin')
   @ApiOperation({ summary: 'Approve pending user' })
-  @ApiResponse({ status: 200, description: 'Usuario aprobado y rol de apoderado asignado' })
+  @ApiResponse({ status: 200, description: 'User approved and apoderado role assigned' })
   approveUser(@Param('id') id: string) {
     return this.usersService.approveUser(id);
   }

@@ -1,4 +1,4 @@
-import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Logger, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
@@ -17,27 +17,53 @@ export class ExternalApisService {
       const url = `https://api.mltprdj.com/cedruc/v1/search?ced=${cedula}`;
       const { data } = await firstValueFrom(this.httpService.get(url));
       
-      // La API retorna algo como: { name: "JUAN PEDRO PEREZ", ... } o similar
-      // Adaptar respuesta al formato frontend
-      // NOTA: Ajustar mapeo según respuesta real de la API
-      
-      // Validar si la respuesta es JSON válido o un error de PHP
-      if (typeof data !== 'object' || !data.name) {
-        // Intentar parsear si viene como texto estilo PHP Array
-        // Por ahora, dado el error "Table doesn't exist", asumimos fallo y retornamos null
-        this.logger.warn(`API response invalid or DB error for cedula ${cedula}: ${JSON.stringify(data)}`);
-        return null;
+      // Validar si la respuesta tiene la estructura esperada
+      // La API retorna: { nombre, fechaNacimiento, genero, nacionalidad, ... }
+      if (typeof data !== 'object' || !data.nombre) {
+        this.logger.warn(`API response invalid or data not found for cedula ${cedula}: ${JSON.stringify(data)}`);
+        // Si la API no retorna datos válidos, lanzamos NotFound para que el controller retorne 404
+        throw new NotFoundException(`No se encontraron datos para la cédula ${cedula}`);
       }
 
+      // Parsear nombre: APELLIDO1 APELLIDO2 NOMBRE1 NOMBRE2 ...
+      const parts = data.nombre.split(' ');
+      const lastName = parts.slice(0, 2).join(' ');
+      const firstName = parts.slice(2).join(' ');
+
+      // Parsear fecha nacimiento: 10/03/1992 -> 1992-03-10
+      let birthDate = '';
+      if (data.fechaNacimiento) {
+        const [day, month, year] = data.fechaNacimiento.split('/');
+        if (day && month && year) {
+          birthDate = `${year}-${month}-${day}`;
+        }
+      }
+
+      // Mapear género
+      let gender = '';
+      if (data.genero === 'HOMBRE') gender = 'M';
+      else if (data.genero === 'MUJER') gender = 'F';
+
+      // Lugar de nacimiento (ESMERALDAS/ESMERALDAS/ESMERALDAS) -> Provincia/Canton/Parroquia
+      // No mapeamos directamente porque LocationSelector usa IDs, pero podemos pasar el string raw si es útil
+      // O intentar parsear si el frontend lo soporta. Por ahora devolvemos lo básico.
+
       return {
-        firstName: data.name ? data.name.split(' ').slice(2).join(' ') : '', // Heurística simple
-        lastName: data.name ? data.name.split(' ').slice(0, 2).join(' ') : '',
+        firstName: firstName,
+        lastName: lastName,
+        birthDate: birthDate,
+        gender: gender,
+        nationality: data.nacionalidad || '',
+        address: `${data.lugarDomicilio || ''} ${data.calleDomicilio || ''}`.trim(),
         raw: data
       };
     } catch (error) {
       this.logger.warn(`Error fetching cedula ${cedula}: ${error.message}`);
-      // No lanzar error 500 para no bloquear flujo, retornar null
-      return null;
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      // Retornar null o lanzar NotFound si falla la conexión
+      throw new NotFoundException('Error al consultar datos externos');
     }
   }
 }

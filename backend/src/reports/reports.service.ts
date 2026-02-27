@@ -65,16 +65,53 @@ export class ReportsService {
       pending: number;
     }>();
 
+    // Helper mappings to align Application enums/keys with Quota labels
+    const mapLevel = (level: string) => {
+      const mapping: Record<string, string> = {
+        'inicial_1': 'Inicial 1 (3 años)',
+        'inicial_2': 'Inicial 2 (4 años)',
+        '1ro_basico': '1ero EGB',
+        '2do_basico': '2do EGB',
+        '3ro_basico': '3ero EGB',
+        '4to_basico': '4to EGB',
+        '5to_basico': '5to EGB',
+        '6to_basico': '6to EGB',
+        '7mo_basico': '7mo EGB',
+        '8vo_basico': '8vo EGB',
+        '9no_basico': '9no EGB',
+        '10mo_basico': '10mo EGB',
+        '1ro_bachillerato': '1ero BGU',
+        '2do_bachillerato': '2do BGU',
+        '3ro_bachillerato': '3ero BGU',
+      };
+      return mapping[level] || level;
+    };
+
+    const mapShift = (shift: string | null) => {
+      if (shift === 'MORNING') return 'Matutina';
+      if (shift === 'AFTERNOON') return 'Vespertina';
+      return shift || 'Desconocido';
+    };
+
+    const mapSpecialty = (sp: string | null) => {
+      if (sp === 'CIENCIAS') return 'Ciencias';
+      if (sp === 'TECNICO_INFORMATICA') return 'Técnico Informática';
+      return sp;
+    };
+
     // Initialize map with unique keys from applications (or quotas potentially, but quotas might have 0 apps)
     // Let's iterate applications first to count reality
     applications.forEach(app => {
-        const key = `${app.gradeLevel}-${app.shift}-${app.specialty || 'none'}`;
+        const mappedLevel = mapLevel(app.gradeLevel || 'Desconocido');
+        const mappedShift = mapShift(app.shift);
+        const mappedSpecialty = mapSpecialty(app.specialty);
+        const key = `${mappedLevel}-${mappedShift}-${mappedSpecialty || 'none'}`;
         
         if (!statsMap.has(key)) {
             statsMap.set(key, {
-                level: app.gradeLevel || 'Desconocido', // Handle null just in case
-                shift: app.shift,
-                specialty: app.specialty,
+                level: mappedLevel,
+                shift: mappedShift,
+                specialty: mappedSpecialty,
                 totalApplications: 0,
                 approved: 0,
                 rejected: 0,

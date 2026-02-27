@@ -16,6 +16,7 @@ export class NotificationsService {
       APPLICATION_REJECTED: 'Solicitud Rechazada',
       APPLICATION_UNDER_REVIEW: 'Solicitud en Revisión',
       DOCUMENT_REQUIRED: 'Documento Requerido',
+      MATRICULATED: 'Matriculación Exitosa',
     };
     return titles[type] || 'Nueva Notificación';
   }
@@ -30,6 +31,7 @@ export class NotificationsService {
       APPLICATION_REJECTED: 'URGENT',
       APPLICATION_UNDER_REVIEW: 'NORMAL',
       DOCUMENT_REQUIRED: 'HIGH',
+      MATRICULATED: 'HIGH',
     };
     return priorities[type] || 'NORMAL';
   }
@@ -70,6 +72,7 @@ export class NotificationsService {
       APPLICATION_REJECTED: `La solicitud de ${studentName} no fue aprobada${additionalInfo ? `: ${additionalInfo}` : ''}`,
       APPLICATION_UNDER_REVIEW: `La solicitud de ${studentName} está siendo evaluada`,
       DOCUMENT_REQUIRED: `Falta un documento en la solicitud de ${studentName}`,
+      MATRICULATED:  `El estudiante ${studentName} ha sido matriculado correctamente.${additionalInfo ? ` Asignación - ${additionalInfo}` : ''}`,
     };
 
     return this.create({

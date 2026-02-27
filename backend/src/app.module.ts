@@ -12,6 +12,7 @@ import { ReportsModule } from './reports/reports.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ExternalApisModule } from './external-apis/external-apis.module';
+import { ExtraContactsModule } from './extra-contacts/extra-contacts.module';
 
 @Module({
   imports: [
@@ -25,9 +26,11 @@ import { ExternalApisModule } from './external-apis/external-apis.module';
     NotificationsModule,
     UploadsModule,
     QuotasModule,
+    QuotasModule,
     InstitutionsModule,
     ReportsModule,
     ExternalApisModule,
+    ExtraContactsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
