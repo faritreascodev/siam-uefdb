@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { LoginCarousel } from "@/components/auth/login-carousel";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
@@ -7,7 +8,16 @@ export default function LoginPage() {
       {/* Left Side - Form */}
       <div className="flex flex-col justify-center w-full px-4 py-12 lg:w-1/2 lg:px-20 xl:px-24">
         <div className="mx-auto w-full max-w-sm lg:max-w-md">
-          <div className="mb-8">
+          <div className="mb-8 flex flex-col items-center lg:items-start">
+            <div className="mb-6">
+              <Image
+                src="/assets/logo-uefdb.png"
+                alt="Logo UEFDB"
+                width={80}
+                height={80}
+                className="object-contain"
+              />
+            </div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl text-left">
               Bienvenido
             </h1>
@@ -19,9 +29,9 @@ export default function LoginPage() {
           <LoginForm />
 
           <div className="mt-8 text-center text-xs text-gray-400">
-             <p>Credenciales demo:</p>
-             <p>Admin: admin@academyc.com / Admin123!</p>
-           </div>
+            <p>Credenciales demo:</p>
+            <p>Admin: admin@academyc.com / Admin123!</p>
+          </div>
         </div>
       </div>
 
