@@ -6,6 +6,7 @@ export type ApplicationStatus =
   | 'UNDER_REVIEW'
   | 'REQUIRES_CORRECTION'
   | 'APPROVED'
+  | 'PAYMENT_UPLOADED'
   | 'PAYMENT_VALIDATED'
   | 'MATRICULATED'
   | 'REJECTED'
@@ -21,7 +22,8 @@ export type DocumentType =
   | 'REPRESENTATIVE_ID'
   | 'STUDENT_PHOTO'
   | 'GRADE_CERTIFICATE'
-  | 'UTILITY_BILL';
+  | 'UTILITY_BILL'
+  | 'PAYMENT_RECEIPT';
 
 export interface BirthPlace {
   country?: string;
@@ -46,6 +48,15 @@ export interface ParentData {
 export interface RepresentativeData extends ParentData {
   relationship?: string;
   legalGuardianDocument?: string;
+}
+
+export interface ExtraContact {
+  cedula?: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone: string;
+  relationship: string;
 }
 
 export interface ApplicationDocument {
@@ -97,13 +108,23 @@ export interface Application {
   fatherData?: ParentData;
   motherData?: ParentData;
   representativeData?: RepresentativeData;
+  extraContacts?: ExtraContact[];
 
   // Documentos
   documents?: ApplicationDocument[];
 
+  // Ideario UEFDB
+  acceptedIdeario?: boolean;
+  acceptedAt?: string;
+
+  // Datos de Pago de Matrícula
+  paymentDate?: string;
+  paymentReference?: string;
+  paymentAmount?: number;
+
   // Usuario
   userId: string;
-  
+
   // Asignación de Paralelo (Nuevo field)
   assignedParallel?: string;
 
@@ -112,13 +133,13 @@ export interface Application {
   rejectionReason?: string;
   correctionRequest?: string;
   internalComments?: InternalComment[];
-  
+
   // Cursillos
   cursilloScheduled?: boolean;
   cursilloDate?: string;
   cursilloResult?: 'PENDING' | 'APPROVED' | 'REJECTED';
   cursilloNotes?: string;
-  
+
   // Asignación a Directivo
   assignedToId?: string;
   assignedTo?: {
@@ -163,6 +184,7 @@ export const STATUS_LABELS: Record<ApplicationStatus, string> = {
   UNDER_REVIEW: 'En Revisión',
   REQUIRES_CORRECTION: 'Requiere Corrección',
   APPROVED: 'Aprobada',
+  PAYMENT_UPLOADED: 'Pago Cargado',
   PAYMENT_VALIDATED: 'Pago Validado',
   MATRICULATED: 'Matriculada',
   REJECTED: 'Rechazada',
@@ -177,6 +199,7 @@ export const STATUS_COLORS: Record<ApplicationStatus, string> = {
   UNDER_REVIEW: 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200',
   REQUIRES_CORRECTION: 'bg-orange-100 text-orange-800 hover:bg-orange-200',
   APPROVED: 'bg-green-100 text-green-800 hover:bg-green-200',
+  PAYMENT_UPLOADED: 'bg-teal-100 text-teal-800 hover:bg-teal-200',
   PAYMENT_VALIDATED: 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200',
   MATRICULATED: 'bg-purple-100 text-purple-800 hover:bg-purple-200',
   REJECTED: 'bg-red-100 text-red-800 hover:bg-red-200',
@@ -191,6 +214,7 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
   STUDENT_PHOTO: 'Foto del Estudiante',
   GRADE_CERTIFICATE: 'Certificado de Notas',
   UTILITY_BILL: 'Planilla de Servicios Básicos',
+  PAYMENT_RECEIPT: 'Comprobante de Pago de Matrícula',
 };
 
 export const GRADE_LEVELS = [

@@ -7,50 +7,100 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { signOut } from "next-auth/react"
 import { useRoles } from "@/hooks/use-roles"
-import { Home, Users, Settings, LogOut, FileText, Calendar, Monitor } from "lucide-react"
+import { Home, Users, Settings, LogOut, FileText, Calendar, Monitor, History } from "lucide-react"
+import { useEffect, useState } from "react"
+import { getSystemConfigs } from "@/lib/api-config"
+import { useSession } from "next-auth/react"
 
 // ... imports
 
 export function AdminSidebar() {
   const pathname = usePathname()
-  const { hasAdminAccess, isSecretary } = useRoles()
+  const { data: session } = useSession()
+  const { hasAdminAccess, isAdmin, isSuperAdmin, isSecretary, isDirectivo } = useRoles()
+  const isFullAdmin = isAdmin() || isSuperAdmin()
+
+  const [secModules, setSecModules] = useState<any>({
+    dashboard: true,
+    admisiones: true,
+    matriculacion: true,
+    cupos: true,
+    cursillos: true,
+    reportes: false,
+    usuarios: false,
+    configuracion: false,
+    auditoria: false
+  })
+
+  // To maintain compatibility with existing functionality
+  const [canSecretaryManageUsers, setCanSecretaryManageUsers] = useState(false)
+
+  useEffect(() => {
+    // @ts-ignore
+    const token = session?.accessToken || session?.user?.accessToken
+    if (token) {
+      getSystemConfigs(token).then((configs) => {
+        const confUsers = configs.find((c: any) => c.key === 'SECRETARY_MANAGE_USERS')
+        if (confUsers?.value === 'true') {
+          setCanSecretaryManageUsers(true)
+        }
+
+        const confModules = configs.find((c: any) => c.key === 'SECRETARY_MODULES')
+        if (confModules?.value) {
+          try {
+            setSecModules(JSON.parse(confModules.value))
+          } catch (e) {
+            console.error(e)
+          }
+        }
+      }).catch(console.error)
+    }
+  }, [session])
+
+  const isSec = isSecretary()
 
   const navItems = [
     {
       title: "Dashboard",
       href: "/admin",
       icon: Home,
-      show: hasAdminAccess(),
+      show: isFullAdmin || isDirectivo() || (isSec && secModules.dashboard),
     },
     {
       title: "Solicitudes",
       href: "/admin/admisiones",
       icon: FileText,
-      show: hasAdminAccess() || isSecretary(),
+      show: isFullAdmin || isDirectivo() || (isSec && secModules.admisiones),
     },
     {
       title: "Cursillos",
       href: "/admin/cursillos",
       icon: Calendar,
-      show: hasAdminAccess() || isSecretary(),
+      show: isFullAdmin || isDirectivo() || (isSec && secModules.cursillos),
     },
     {
       title: "Usuarios",
       href: "/admin/users",
       icon: Users,
-      show: hasAdminAccess(),
+      show: isFullAdmin || (isSec && canSecretaryManageUsers) || (isSec && secModules.usuarios),
     },
     {
       title: "Configuración",
       href: "/admin/settings",
       icon: Settings,
-      show: hasAdminAccess(),
+      show: isFullAdmin || (isSec && secModules.configuracion),
+    },
+    {
+      title: "Auditoría",
+      href: "/admin/auditoria",
+      icon: History,
+      show: isFullAdmin || (isSec && secModules.auditoria),
     },
     {
       title: "Monitor Cursos",
       href: "/admin/cursos",
       icon: Monitor,
-      show: hasAdminAccess() || isSecretary(),
+      show: isFullAdmin || isDirectivo() || (isSec && secModules.matriculacion),
     },
   ]
 
@@ -58,7 +108,7 @@ export function AdminSidebar() {
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
         <Link
-          href={hasAdminAccess() ? "/admin" : "/admin/admisiones"}
+          href={(isFullAdmin || isDirectivo()) ? "/admin" : "/admin/admisiones"}
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
         >
           <Home className="h-4 w-4 transition-all group-hover:scale-110" />
@@ -69,7 +119,7 @@ export function AdminSidebar() {
           {navItems.filter(item => item.show).map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
-            
+
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>

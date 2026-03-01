@@ -10,8 +10,8 @@ export function useRoles() {
   const isApoderado = () => roles.includes("apoderado"); // Backend role is 'apoderado'
   const isSecretary = () => roles.includes("secretary");
   const isUser = () => roles.includes("user");
-  // Admin access: superadmin OR admin
-  const hasAdminAccess = () => isSuperAdmin() || isAdmin();
+  // Admin access: superadmin OR admin OR secretary OR principal
+  const hasAdminAccess = () => isSuperAdmin() || isAdmin() || isSecretary() || isDirectivo();
 
   return {
     hasRole: (role: string) => roles.includes(role),

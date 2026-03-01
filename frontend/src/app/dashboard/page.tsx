@@ -5,18 +5,20 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRoles } from "@/hooks/use-roles";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { 
-  LogOut, 
-  User, 
-  Shield, 
-  Baby, 
-  Users, 
-  FileStack, 
-  Settings, 
-  Inbox, 
+import { Button } from "@/components/ui/button";
+import {
+  LogOut,
+  User,
+  Shield,
+  Baby,
+  Users,
+  FileStack,
+  Settings,
+  Inbox,
   ClipboardList,
   Info,
-  GraduationCap
+  GraduationCap,
+  Clock
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -31,6 +33,34 @@ export default function DashboardPage() {
   if (!session) {
     router.push("/login");
     return null;
+  }
+
+  if ((session?.user as any)?.status === 'PENDIENTE_APROBACION') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-center">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md border border-amber-200">
+          <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="h-8 w-8 text-amber-600 animate-pulse" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Registro en Revisión</h2>
+          <p className="text-muted-foreground mb-6">
+            Tu cuenta ha sido creada exitosamente. Un administrador debe revisar y aprobar tu registro antes de que puedas acceder a todas las funcionalidades.
+          </p>
+          <div className="bg-blue-50 p-4 rounded-lg text-sm text-blue-800 mb-6">
+            <p className="font-medium">¿Qué sigue?</p>
+            <p className="mt-1">Recibirás un correo electrónico una vez que tu cuenta sea activada.</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar Sesión
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -60,7 +90,7 @@ export default function DashboardPage() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        
+
         <div className="mb-8">
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Hola, {session.user.name || session.user.email}</h2>
           <p className="text-muted-foreground mt-2">
@@ -69,7 +99,7 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Sidebar - User Info */}
           <div className="lg:col-span-1">
             <Card>
@@ -112,9 +142,9 @@ export default function DashboardPage() {
           {/* Main Content - Quick Actions */}
           <div className="lg:col-span-2 space-y-6">
             <h3 className="text-lg font-semibold tracking-tight">Accesos Rápidos</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
+
               {/* Portal de Apoderado - Para guardians */}
               {isApoderado() && (
                 <Link href="/apoderado" className="group">

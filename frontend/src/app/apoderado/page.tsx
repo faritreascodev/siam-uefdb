@@ -8,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import {
   Select,
@@ -23,16 +23,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  FileText, 
-  Clock, 
-  Send, 
-  AlertCircle, 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Eye, 
+import {
+  FileText,
+  Clock,
+  Send,
+  AlertCircle,
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
   MoreHorizontal,
   CheckCircle2,
   XCircle,
@@ -63,7 +63,7 @@ export default function ApoderadoDashboard() {
 
   const loadData = async () => {
     if (!token) return;
-    
+
     try {
       const [appsData, statsData] = await Promise.all([
         getMyApplications(token as string),
@@ -97,7 +97,7 @@ export default function ApoderadoDashboard() {
 
   // Filtrar aplicaciones
   const filteredApplications = applications.filter(app => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       `${app.studentFirstName} ${app.studentLastName}`.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -286,9 +286,9 @@ export default function ApoderadoDashboard() {
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
-                        {formatDistanceToNow(new Date(app.updatedAt), { 
-                          addSuffix: true, 
-                          locale: es 
+                        {formatDistanceToNow(new Date(app.updatedAt), {
+                          addSuffix: true,
+                          locale: es
                         })}
                       </span>
                     </TableCell>
@@ -312,11 +312,11 @@ export default function ApoderadoDashboard() {
 }
 
 // Componente de acciones por solicitud
-function ApplicationActions({ 
-  application, 
-  onDelete 
-}: { 
-  application: Application; 
+function ApplicationActions({
+  application,
+  onDelete
+}: {
+  application: Application;
   onDelete: (id: string) => void;
 }) {
   const canEdit = ['DRAFT', 'REQUIRES_CORRECTION'].includes(application.status);
@@ -336,7 +336,7 @@ function ApplicationActions({
             Ver Detalle
           </Link>
         </DropdownMenuItem>
-        
+
         {canEdit && (
           <DropdownMenuItem asChild>
             <Link href={`/apoderado/solicitudes/${application.id}/editar`}>
@@ -346,16 +346,10 @@ function ApplicationActions({
           </DropdownMenuItem>
         )}
 
-        {/* --- NUEVO: Contactos Extra --- */}
-        <DropdownMenuItem asChild>
-          <Link href={`/apoderado/solicitudes/${application.id}/contactos`}>
-            <Users className="mr-2 h-4 w-4" />
-            Contactos Extra
-          </Link>
-        </DropdownMenuItem>
-        
+
+
         {canDelete && (
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className="text-red-600"
             onClick={() => onDelete(application.id)}
           >

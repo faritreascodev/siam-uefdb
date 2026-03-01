@@ -39,26 +39,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             name: `${data.user.firstName || ''} ${data.user.lastName || ''}`.trim(),
             accessToken: data.access_token,
             roles: data.user.roles || [],
+            status: data.user.status,
           };
         } catch (error: any) {
           console.error("Auth error:", error);
-          
+
           class CustomError extends CredentialsSignin {
-             code = error.message || "Authentication failed";
+            code = error.message || "Authentication failed";
           }
-          
+
           throw new CustomError();
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
-        token.accessToken = user.accessToken;
-        token.roles = user.roles;
+        token.accessToken = (user as any).accessToken;
+        token.roles = (user as any).roles;
+        token.status = (user as any).status;
       }
+
+      if (trigger === "update" && session && session.user) {
+        if (session.user.name) {
+          token.name = session.user.name;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -66,6 +75,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.accessToken = token.accessToken as string;
         session.user.roles = token.roles as string[];
+        (session.user as any).status = token.status as string;
+        if (token.name) {
+          session.user.name = token.name;
+        }
       }
       return session;
     },

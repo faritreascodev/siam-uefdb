@@ -27,11 +27,12 @@ function cleanApplicationData(data: Partial<Application>): Partial<Application> 
     'processedById', 'processedAt', 'cursilloScheduled', 'cursilloDate',
     'cursilloResult', 'cursilloNotes', 'acceptedAt', 'adminNotes',
     'rejectionReason', 'correctionRequest', 'internalComments',
-    'createdAt', 'updatedAt', 'documents', 'user', 'assignedParallel'
+    'createdAt', 'updatedAt', 'documents', 'user', 'assignedParallel',
+    'paymentDate', 'paymentReference', 'paymentAmount'
   ];
 
   const cleaned = { ...data };
-  
+
   readOnlyFields.forEach(field => {
     // @ts-ignore
     delete cleaned[field];
@@ -40,6 +41,14 @@ function cleanApplicationData(data: Partial<Application>): Partial<Application> 
   // Ensure strict number types for validation
   if (cleaned.lastYearAverage !== undefined && cleaned.lastYearAverage !== null) {
     cleaned.lastYearAverage = Number(cleaned.lastYearAverage);
+  }
+
+  // Clean extraContacts array
+  if (cleaned.extraContacts && Array.isArray(cleaned.extraContacts)) {
+    cleaned.extraContacts = cleaned.extraContacts.map((contact: any) => {
+      const { id, applicationId, createdAt, updatedAt, ...rest } = contact;
+      return rest;
+    });
   }
 
   return cleaned;
@@ -52,7 +61,7 @@ export async function updateApplication(
   data: Partial<Application>
 ): Promise<Application> {
   const cleanedData = cleanApplicationData(data);
-  
+
   const res = await fetch(`${API_URL}/applications/${id}`, {
     method: 'PATCH',
     headers: {
@@ -193,9 +202,18 @@ export async function deleteDocument(
 }
 
 // Verificar cupos
-export async function checkQuotaAvailability(token: string, gradeLevel: string, shift: string) {
+export async function checkQuotaAvailability(
+  token: string,
+  gradeLevel: string,
+  shift: string,
+  specialty?: string,
+  previousSchool?: string
+) {
   const params = new URLSearchParams({ gradeLevel, shift });
-  const res = await fetch(`${API_URL}/applications/check-quota?${params}`, {
+  if (specialty) params.append('specialty', specialty);
+  if (previousSchool) params.append('previousSchool', previousSchool);
+
+  const res = await fetch(`${API_URL}/applications/check-quota?${params.toString()}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Error al verificar cupos');
@@ -250,6 +268,53 @@ export async function recordCursilloResult(
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.message || 'Error al registrar resultado del cursillo');
+  }
+  return res.json();
+}
+
+export async function bulkApproveApplications(token: string, ids: string[]): Promise<any> {
+  const res = await fetch(`${API_URL}/applications/admin/bulk/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error('Error al aprobar solicitudes en masa');
+  return res.json();
+}
+
+export async function bulkRejectApplications(token: string, ids: string[], reason: string): Promise<any> {
+  const res = await fetch(`${API_URL}/applications/admin/bulk/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids, reason }),
+  });
+  if (!res.ok) throw new Error('Error al rechazar solicitudes en masa');
+  return res.json();
+}
+
+export async function uploadPaymentDetails(
+  token: string,
+  id: string,
+  paymentDate: string,
+  paymentReference?: string
+): Promise<Application> {
+  const res = await fetch(`${API_URL}/applications/${id}/payment`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ paymentDate, paymentReference }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Error al cargar detalles de pago');
   }
   return res.json();
 }

@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Copy } from 'lucide-react';
+import { Copy, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FamilyDataFormProps {
@@ -52,6 +52,30 @@ export function FamilyDataForm({ data, onChange }: FamilyDataFormProps) {
       },
     });
     toast.success(`Datos del ${from === 'father' ? 'padre' : 'la madre'} copiados al representante`);
+  };
+
+  const extraContacts = data.extraContacts || [];
+
+  const handleAddContact = () => {
+    if (extraContacts.length >= 3) {
+      toast.error('Solo se permiten hasta 3 contactos adicionales');
+      return;
+    }
+    onChange({
+      extraContacts: [...extraContacts, { firstName: '', lastName: '', phone: '', relationship: '' }]
+    });
+  };
+
+  const handleRemoveContact = (index: number) => {
+    const newContacts = [...extraContacts];
+    newContacts.splice(index, 1);
+    onChange({ extraContacts: newContacts });
+  };
+
+  const handleContactChange = (index: number, field: string, value: any) => {
+    const newContacts = [...extraContacts];
+    newContacts[index] = { ...newContacts[index], [field]: value };
+    onChange({ extraContacts: newContacts });
   };
 
   return (
@@ -143,6 +167,76 @@ export function FamilyDataForm({ data, onChange }: FamilyDataFormProps) {
                 placeholder="Número de documento de tutela"
               />
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Contactos Extras */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Contactos Adicionales de Emergencia</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddContact}
+              disabled={extraContacts.length >= 3}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Añadir Contacto
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">Opcional. Máximo 3 contactos que podamos llamar en caso de que los principales no respondan.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {extraContacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic py-4">No se han añadido contactos de emergencia adicionales.</p>
+          ) : (
+            extraContacts.map((contact, index) => (
+              <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 border rounded-lg p-4 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => handleRemoveContact(index)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+
+                <div className="space-y-2">
+                  <Label>Nombres *</Label>
+                  <Input
+                    value={contact.firstName || ''}
+                    onChange={(e) => handleContactChange(index, 'firstName', e.target.value)}
+                    placeholder="Nombres"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Apellidos *</Label>
+                  <Input
+                    value={contact.lastName || ''}
+                    onChange={(e) => handleContactChange(index, 'lastName', e.target.value)}
+                    placeholder="Apellidos"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Teléfono *</Label>
+                  <Input
+                    value={contact.phone || ''}
+                    onChange={(e) => handleContactChange(index, 'phone', e.target.value)}
+                    placeholder="Número telefónico"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Parentesco *</Label>
+                  <Input
+                    value={contact.relationship || ''}
+                    onChange={(e) => handleContactChange(index, 'relationship', e.target.value)}
+                    placeholder="Tío/a, Abuelo/a, Amigo/a, etc."
+                  />
+                </div>
+              </div>
+            ))
           )}
         </CardContent>
       </Card>

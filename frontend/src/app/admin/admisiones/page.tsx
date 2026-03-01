@@ -39,6 +39,10 @@ import {
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { DataTable } from '@/components/ui/data-table';
+import { columns } from './columns';
+import { bulkApproveApplications, bulkRejectApplications } from '@/lib/api-admin-applications';
+import { toast } from 'sonner';
 
 export default function AdminAdmisionesPage() {
   const { data: session } = useSession();
@@ -48,9 +52,9 @@ export default function AdminAdmisionesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ 
-    status: 'ALL', 
-    gradeLevel: 'ALL', 
+  const [filters, setFilters] = useState({
+    status: 'ALL',
+    gradeLevel: 'ALL',
     search: '',
     startDate: '',
     endDate: '',
@@ -282,7 +286,7 @@ export default function AdminAdmisionesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex gap-2 items-center">
                 <Input
                   type="date"
@@ -305,100 +309,72 @@ export default function AdminAdmisionesPage() {
 
       {/* Tabla de Solicitudes */}
       <Card>
-        <CardHeader>
-          <CardTitle>Solicitudes ({total})</CardTitle>
-          <CardDescription>
-            Mostrando {filteredApplications.length} de {total} solicitudes
-          </CardDescription>
-        </CardHeader>
         <CardContent>
-          {filteredApplications.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="mx-auto h-12 w-12 opacity-30 mb-2" />
-              <p>No hay solicitudes que coincidan con los filtros</p>
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Estudiante</TableHead>
-                    <TableHead>DNI</TableHead>
-                    <TableHead>Año Solicitado</TableHead>
-                    <TableHead>Grado / Esp.</TableHead>
-                    <TableHead>Fecha Envío</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredApplications.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell className="font-medium">
-                        <div>{app.studentFirstName} {app.studentLastName}</div>
-                        <div className="text-xs text-muted-foreground md:hidden">{app.studentCedula}</div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">{app.studentCedula || '-'}</TableCell>
-                      <TableCell>2026-2027</TableCell> 
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span>{GRADE_LEVELS.find(g => g.value === app.gradeLevel)?.label || app.gradeLevel || '-'}</span>
-                          {app.specialty && <span className="text-xs text-muted-foreground">{app.specialty}</span>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {app.submittedAt
-                          ? formatDistanceToNow(new Date(app.submittedAt), { addSuffix: true, locale: es })
-                          : '-'
-                        }
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={STATUS_COLORS[app.status]}>
-                          {STATUS_LABELS[app.status]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="outline" size="sm" asChild>
-                          <Link href={`/admin/admisiones/${app.id}`}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Ver
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          <DataTable
+            columns={columns}
+            data={applications}
+            bulkActions={(table) => {
+              const selectedRows = table.getFilteredSelectedRowModel().rows
+              const selectedIds = selectedRows.map((row: any) => row.original.id)
+              const canApprove = selectedRows.some((row: any) => ['SUBMITTED', 'UNDER_REVIEW', 'CURSILLO_APPROVED'].includes(row.original.status))
 
-              {/* Paginación */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Página {page} de {totalPages}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Anterior
+              const handleBulkApprove = async () => {
+                if (!token) return
+                try {
+                  await bulkApproveApplications(token, selectedIds)
+                  toast.success(`${selectedIds.length} solicitudes aprobadas`)
+                  loadData()
+                  table.resetRowSelection()
+                } catch (err: any) {
+                  toast.error(err.message)
+                }
+              }
+
+              const handleBulkReject = async () => {
+                if (!token) return
+                const reason = window.prompt("Razón del rechazo:")
+                if (reason === null) return
+                try {
+                  await bulkRejectApplications(token, selectedIds, reason)
+                  toast.success(`${selectedIds.length} solicitudes rechazadas`)
+                  loadData()
+                  table.resetRowSelection()
+                } catch (err: any) {
+                  toast.error(err.message)
+                }
+              }
+
+              return (
+                <div className="flex gap-2 items-center bg-slate-100 p-1 px-2 rounded-md border">
+                  <span className="text-xs font-medium mr-2">{selectedIds.length} seleccionadas</span>
+                  {canApprove && (
+                    <Button size="sm" variant="outline" className="h-8 text-green-600" onClick={handleBulkApprove}>
+                      <CheckCircle className="h-3.5 w-3.5 mr-1" /> Aprobar
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page >= totalPages}
-                    >
-                      Siguiente
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
+                  )}
+                  <Button size="sm" variant="outline" className="h-8 text-red-600" onClick={handleBulkReject}>
+                    <XCircle className="h-3.5 w-3.5 mr-1" /> Rechazar
+                  </Button>
                 </div>
-              )}
-            </>
+              )
+            }}
+          />
+
+          {/* Paginación personalizada (Opcional, DataTable tiene una básica, pero podemos mantener esta sync con totalPages) */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-4">
+              <p className="text-sm text-muted-foreground">
+                Página {page} de {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

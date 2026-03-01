@@ -244,8 +244,8 @@ export async function getAvailableParallels(token: string, id: string): Promise<
     },
   });
   if (!res.ok) {
-     const error = await res.json();
-     throw new Error(error.message || 'Error al obtener paralelos');
+    const error = await res.json();
+    throw new Error(error.message || 'Error al obtener paralelos');
   }
   return res.json();
 }
@@ -265,7 +265,49 @@ export async function assignParallel(token: string, id: string, parallel: string
     throw new Error(error.message || 'Error al asignar paralelo');
   }
   return res.json();
+} export async function bulkApproveApplications(token: string, ids: string[]): Promise<any> {
+  const res = await fetch(`${API_URL}/applications/admin/bulk/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) throw new Error('Error al aprobar solicitudes en masa');
+  return res.json();
 }
 
+export async function bulkRejectApplications(token: string, ids: string[], reason: string): Promise<any> {
+  const res = await fetch(`${API_URL}/applications/admin/bulk/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids, reason }),
+  });
+  if (!res.ok) throw new Error('Error al rechazar solicitudes en masa');
+  return res.json();
+}
 
-
+export async function validatePayment(
+  token: string,
+  id: string,
+  isValid: boolean,
+  reason?: string
+): Promise<Application> {
+  const res = await fetch(`${API_URL}/applications/admin/${id}/validate-payment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ isValid, reason }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || 'Error al validar pago');
+  }
+  return res.json();
+}

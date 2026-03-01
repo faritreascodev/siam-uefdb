@@ -33,7 +33,7 @@ export function NotificationCenter() {
 
   const loadNotifications = useCallback(async () => {
     if (!accessToken) return;
-    
+
     setLoading(true);
     try {
       const [notifs, count] = await Promise.all([
@@ -60,10 +60,10 @@ export function NotificationCenter() {
     // @ts-ignore
     const token = session?.accessToken || session?.user?.accessToken;
     if (!token) return;
-    
+
     try {
       await markAsRead(token as string, notificationId);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -76,7 +76,7 @@ export function NotificationCenter() {
     // @ts-ignore
     const token = session?.accessToken || session?.user?.accessToken;
     if (!token) return;
-    
+
     try {
       await markAllAsRead(token as string);
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
@@ -91,7 +91,13 @@ export function NotificationCenter() {
       handleMarkAsRead(notification.id);
     }
     if (notification.applicationId) {
-      router.push(`/apoderado/solicitudes/${notification.applicationId}`);
+      // @ts-ignore
+      const roles: string[] = session?.user?.roles || [];
+      const isApoderado = roles.includes('apoderado') || roles.length === 0;
+      const path = isApoderado
+        ? `/apoderado/solicitudes/${notification.applicationId}`
+        : `/admin/admisiones/${notification.applicationId}`;
+      router.push(path);
       setIsOpen(false);
     }
   };
@@ -106,8 +112,8 @@ export function NotificationCenter() {
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
+            <Badge
+              variant="destructive"
               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
             >
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -115,32 +121,32 @@ export function NotificationCenter() {
           )}
         </Button>
       </SheetTrigger>
-      
+
       <SheetContent side="right" className="w-full sm:w-[400px] p-0">
         <SheetHeader className="p-4 border-b">
           <div className="flex items-center justify-between">
             <SheetTitle>Notificaciones</SheetTitle>
             {unreadCount > 0 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleMarkAllAsRead}
               >
                 Marcar todas como leídas
               </Button>
             )}
           </div>
-          
+
           {/* Filtros */}
           <div className="flex gap-2 mt-4">
-            <Button 
+            <Button
               variant={filter === 'all' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setFilter('all')}
             >
               Todas ({notifications.length})
             </Button>
-            <Button 
+            <Button
               variant={filter === 'unread' ? 'secondary' : 'ghost'}
               size="sm"
               onClick={() => setFilter('unread')}
@@ -149,7 +155,7 @@ export function NotificationCenter() {
             </Button>
           </div>
         </SheetHeader>
-        
+
         <div className="overflow-y-auto h-[calc(100vh-160px)]">
           {loading ? (
             <div className="flex items-center justify-center h-32">
@@ -163,8 +169,8 @@ export function NotificationCenter() {
           ) : (
             <div className="divide-y">
               {filteredNotifications.map(notification => (
-                <NotificationItem 
-                  key={notification.id} 
+                <NotificationItem
+                  key={notification.id}
                   notification={notification}
                   onClick={() => handleNotificationClick(notification)}
                 />
@@ -177,15 +183,15 @@ export function NotificationCenter() {
   );
 }
 
-function NotificationItem({ 
+function NotificationItem({
   notification,
-  onClick, 
-}: { 
+  onClick,
+}: {
   notification: Notification;
   onClick: () => void;
 }) {
   return (
-    <div 
+    <div
       className={cn(
         "p-4 cursor-pointer hover:bg-accent transition-colors",
         !notification.isRead && "bg-blue-50/50"
@@ -197,7 +203,7 @@ function NotificationItem({
           "h-2 w-2 rounded-full mt-2 flex-shrink-0",
           !notification.isRead ? "bg-primary" : "bg-gray-300"
         )} />
-        
+
         <div className="flex-1 space-y-1">
           <div className="flex items-start justify-between gap-2">
             <p className={cn(
@@ -206,28 +212,28 @@ function NotificationItem({
             )}>
               {notification.title}
             </p>
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={cn("text-xs", PRIORITY_COLORS[notification.priority])}
             >
               {notification.priority}
             </Badge>
           </div>
-          
+
           <p className="text-sm text-muted-foreground line-clamp-2">
             {notification.message}
           </p>
-          
+
           {notification.application && (
             <p className="text-xs text-muted-foreground">
               Estudiante: {notification.application.studentFirstName} {notification.application.studentLastName}
             </p>
           )}
-          
+
           <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(notification.createdAt), { 
+            {formatDistanceToNow(new Date(notification.createdAt), {
               addSuffix: true,
-              locale: es 
+              locale: es
             })}
           </p>
         </div>

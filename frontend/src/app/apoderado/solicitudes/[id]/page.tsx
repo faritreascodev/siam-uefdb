@@ -3,25 +3,31 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getApplication } from '@/lib/api-applications';
+import { getApplication, uploadDocument, uploadPaymentDetails } from '@/lib/api-applications';
 import { Application, STATUS_LABELS, STATUS_COLORS, DOCUMENT_LABELS, GRADE_LEVELS } from '@/types/application';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  ArrowLeft, 
-  User, 
-  GraduationCap, 
-  Users, 
-  FileText, 
+import {
+  ArrowLeft,
+  User,
+  GraduationCap,
+  Users,
+  FileText,
   AlertCircle,
   Calendar,
   MapPin,
   Phone,
   Mail,
   Briefcase,
-  ExternalLink
+  ExternalLink,
+  CheckCircle,
+  Video,
+  CreditCard
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -38,6 +44,11 @@ export default function ApplicationDetailPage({ params }: PageProps) {
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [paymentDate, setPaymentDate] = useState<string>('');
+  const [paymentReference, setPaymentReference] = useState<string>('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
 
   // @ts-ignore
   const token = session?.accessToken || session?.user?.accessToken;
@@ -74,6 +85,37 @@ export default function ApplicationDetailPage({ params }: PageProps) {
 
   const canEdit = ['DRAFT', 'REQUIRES_CORRECTION'].includes(application.status);
   const gradeLabel = GRADE_LEVELS.find(g => g.value === application.gradeLevel)?.label || application.gradeLevel;
+
+  const handlePaymentSubmit = async () => {
+    if (!paymentFile || !paymentDate) {
+      toast.error('Por favor selecciona un archivo y una fecha de pago');
+      return;
+    }
+
+    if (paymentFile.size > 5 * 1024 * 1024) {
+      toast.error('El archivo excede el límite de 5MB');
+      return;
+    }
+
+    // @ts-ignore
+    const token = session?.accessToken || session?.user?.accessToken;
+    if (!token) return;
+
+    setIsSubmittingPayment(true);
+    try {
+      // 1. Upload receipt document
+      await uploadDocument(token, application.id, 'PAYMENT_RECEIPT', paymentFile);
+
+      // 2. Upload payment details and update status
+      const updated = await uploadPaymentDetails(token, application.id, paymentDate, paymentReference);
+      setApplication(updated);
+      toast.success('Comprobante de pago cargado exitosamente');
+    } catch (error: any) {
+      toast.error(error.message || 'Error al cargar el pago');
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -138,6 +180,156 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         </div>
       )}
 
+      {/* Payment Module */}
+      {application.status === 'APPROVED' && (
+        <Card className="border-indigo-200 bg-indigo-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-indigo-700">
+              <Briefcase className="h-5 w-5" />
+              Pago de Matrícula Requerido
+            </CardTitle>
+            <CardDescription className="text-indigo-900/70">
+              Para proceder con la matriculación y asignación de cupo, debes realizar el pago de la matrícula.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="bg-white p-4 rounded-lg border shadow-sm">
+              <h4 className="font-semibold mb-2">Información de Pago</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-sm">
+                <p><span className="font-medium text-slate-500">Monto de matrícula:</span> $150.00</p>
+                <p><span className="font-medium text-slate-500">Beneficiario:</span> Unidad Educativa Fiscomisional Don Bosco</p>
+                <p><span className="font-medium text-slate-500">RUC:</span> 1790000000001</p>
+                <p><span className="font-medium text-slate-500">Banco:</span> Banco Pichincha</p>
+                <p><span className="font-medium text-slate-500">Tipo de cuenta:</span> Ahorros</p>
+                <p><span className="font-medium text-slate-500">Número de cuenta:</span> 2200000000</p>
+                <p className="md:col-span-2"><span className="font-medium text-slate-500">Concepto:</span> Matrícula {application.studentFirstName} {application.studentLastName} - {gradeLabel} - 2026-2027</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg border shadow-sm space-y-4">
+              <h4 className="font-semibold">Carga de Comprobante</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Archivo de comprobante (PDF, JPG, PNG - 5MB máx) <span className="text-red-500">*</span></Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={(e) => setPaymentFile(e.target.files?.[0] || null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Fecha de pago <span className="text-red-500">*</span></Label>
+                  <Input
+                    type="date"
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Número de comprobante (opcional)</Label>
+                  <Input
+                    type="text"
+                    placeholder="Ej. 123456789"
+                    value={paymentReference}
+                    onChange={(e) => setPaymentReference(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handlePaymentSubmit}
+                disabled={isSubmittingPayment || !paymentFile || !paymentDate}
+                className="w-full sm:w-auto"
+              >
+                {isSubmittingPayment ? 'Cargando...' : 'Cargar comprobante'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Banner de Pago Validado */}
+      {application.status === 'PAYMENT_VALIDATED' && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-indigo-600 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-indigo-800">Pago Validado - Pendiente de Asignación de Paralelo</h3>
+              <p className="text-sm text-indigo-700 mt-1">Tu pago fue validado correctamente. Secretaría te asignará un paralelo y completará la matrícula.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Card de Matrícula Completada */}
+      {application.status === 'MATRICULATED' && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-800">
+              <CheckCircle className="h-5 w-5" />
+              ¡Matrícula Exitosa!
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-xs text-purple-600 font-medium">Grado Asignado</p>
+                <p className="font-bold text-purple-900">{gradeLabel}</p>
+              </div>
+              {application.assignedParallel && (
+                <div>
+                  <p className="text-xs text-purple-600 font-medium">Paralelo</p>
+                  <p className="font-bold text-purple-900 text-lg">{application.assignedParallel}</p>
+                </div>
+              )}
+              {application.shift && (
+                <div>
+                  <p className="text-xs text-purple-600 font-medium">Jornada</p>
+                  <p className="font-bold text-purple-900">{application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Cursillo Info */}
+      {(['CURSILLO_SCHEDULED', 'CURSILLO_APPROVED', 'CURSILLO_REJECTED'] as const).includes(application.status as any) && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-blue-800">
+              <Video className="h-5 w-5" />
+              Cursillo de Admisión
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-blue-700 text-sm">
+              Este proceso requiere la aprobación de un cursillo de nivelación.
+              {application.cursilloDate && (
+                <span> Fecha programada: <strong>{format(new Date(application.cursilloDate), "d 'de' MMMM, yyyy HH:mm", { locale: es })}</strong></span>
+              )}
+            </p>
+            <a
+              href="https://teams.microsoft.com/meet/27512034425095?p=8iuRnTW4xVg0RJ2i8o"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              <Video className="h-4 w-4" />
+              Unirse al Cursillo por Microsoft Teams
+            </a>
+            {application.cursilloResult && (
+              <div className={`p-3 rounded-lg text-sm font-medium ${application.cursilloResult === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                  application.cursilloResult === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                }`}>
+                Resultado del Cursillo: {application.cursilloResult === 'APPROVED' ? '✅ Aprobado' : application.cursilloResult === 'REJECTED' ? '❌ Reprobado' : '⏳ Pendiente'}
+                {application.cursilloNotes && <p className="mt-1 font-normal">{application.cursilloNotes}</p>}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Datos del Estudiante */}
       <Card>
         <CardHeader>
@@ -152,18 +344,18 @@ export default function ApplicationDetailPage({ params }: PageProps) {
             <InfoItem label="Apellidos" value={application.studentLastName} />
             <InfoItem label="Cédula" value={application.studentCedula} />
             <InfoItem label="Género" value={application.studentGender === 'M' ? 'Masculino' : 'Femenino'} />
-            <InfoItem 
-              label="Fecha de Nacimiento" 
-              value={application.studentBirthDate 
+            <InfoItem
+              label="Fecha de Nacimiento"
+              value={application.studentBirthDate
                 ? format(new Date(application.studentBirthDate), "d 'de' MMMM, yyyy", { locale: es })
                 : undefined
-              } 
+              }
             />
             <InfoItem label="Nacionalidad" value={application.studentNationality} />
           </div>
-          
+
           <Separator />
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoItem label="Dirección" value={application.studentAddress} icon={<MapPin className="h-4 w-4" />} />
             <InfoItem label="Sector" value={application.studentSector} />
@@ -204,9 +396,13 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoItem label="Grado Solicitado" value={gradeLabel} />
-            <InfoItem label="Jornada" value={application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'} />
+            <InfoItem label="Jornada" value={application.shift ? (application.shift === 'MORNING' ? 'Matutina' : 'Vespertina') : undefined} />
+            <InfoItem label="Especialidad" value={application.specialty === 'CIENCIAS' ? 'BGU Ciencias' : application.specialty === 'TECNICO_INFORMATICA' ? 'BGU Técnico Informática' : application.specialty} />
             <InfoItem label="Institución Anterior" value={application.previousSchool} />
             <InfoItem label="Promedio Último Año" value={application.lastYearAverage?.toString()} />
+            {application.assignedParallel && (
+              <InfoItem label="Paralelo Asignado" value={application.assignedParallel} />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -232,9 +428,9 @@ export default function ApplicationDetailPage({ params }: PageProps) {
           {application.representativeData && (
             <>
               <Separator />
-              <ParentInfo 
-                title={`Representante Legal (${application.representativeData.relationship || 'Sin especificar'})`} 
-                data={application.representativeData} 
+              <ParentInfo
+                title={`Representante Legal (${application.representativeData.relationship || 'Sin especificar'})`}
+                data={application.representativeData}
               />
             </>
           )}
@@ -279,13 +475,13 @@ export default function ApplicationDetailPage({ params }: PageProps) {
 }
 
 // Componente auxiliar para mostrar info
-function InfoItem({ 
-  label, 
-  value, 
-  icon 
-}: { 
-  label: string; 
-  value?: string | null; 
+function InfoItem({
+  label,
+  value,
+  icon
+}: {
+  label: string;
+  value?: string | null;
   icon?: React.ReactNode;
 }) {
   return (
@@ -313,9 +509,9 @@ function ParentInfo({ title, data }: { title: string; data: any }) {
         <InfoItem label="Correo" value={data.email} icon={<Mail className="h-4 w-4" />} />
         <InfoItem label="Ocupación" value={data.occupation} icon={<Briefcase className="h-4 w-4" />} />
         {data.livesWithStudent !== undefined && (
-          <InfoItem 
-            label="¿Vive con el estudiante?" 
-            value={data.livesWithStudent ? 'Sí' : 'No'} 
+          <InfoItem
+            label="¿Vive con el estudiante?"
+            value={data.livesWithStudent ? 'Sí' : 'No'}
           />
         )}
       </div>

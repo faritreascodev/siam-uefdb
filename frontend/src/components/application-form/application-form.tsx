@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { createApplication, updateApplication, submitApplication, getApplication } from '@/lib/api-applications';
+import { createApplication, updateApplication, submitApplication, getApplication, checkQuotaAvailability } from '@/lib/api-applications';
 import { Application } from '@/types/application';
 import { FormStepper } from '@/components/form-stepper';
 import { StudentDataForm } from './steps/student-data-form';
@@ -45,7 +45,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [acceptedIdeario, setAcceptedIdeario] = useState(false);
-  
+
   // Flag para evitar doble ejecución en React StrictMode
   const isLoadingRef = useRef(false);
 
@@ -66,15 +66,16 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
           const app = await getApplication(token, applicationId);
           setApplication(app);
           setFormData(app);
+          if (app.acceptedIdeario) setAcceptedIdeario(true);
         } else {
           // Primero, buscar si existe un borrador vacío para reutilizar
           const { getMyApplications } = await import('@/lib/api-applications');
           const myApps = await getMyApplications(token);
-          
+
           // Buscar borrador vacío (DRAFT sin nombre de estudiante)
           const emptyDraft = myApps.find(
-            (app: Application) => 
-              app.status === 'DRAFT' && 
+            (app: Application) =>
+              app.status === 'DRAFT' &&
               (!app.studentFirstName || app.studentFirstName.trim() === '') &&
               (!app.studentLastName || app.studentLastName.trim() === '')
           );
@@ -106,6 +107,19 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
 
   // Guardar al cambiar de paso (auto-save solo al cambiar paso)
   const handleStepChange = async (newStep: number) => {
+    // Validar cupos antes de avanzar del paso 1 (Datos Académicos)
+    if (newStep > 1 && formData.gradeLevel && formData.shift && token) {
+      try {
+        const quotaInfo = await checkQuotaAvailability(token, formData.gradeLevel, formData.shift);
+        if (quotaInfo.available <= 0) {
+          toast.error('Cupos agotados para el grado y jornada seleccionados. Por favor, intente con otra opción.');
+          return; // No avanzar
+        }
+      } catch (error) {
+        console.error("Error al validar cupos:", error);
+      }
+    }
+
     await handleSave(true); // Guardar silenciosamente antes de cambiar
     setCurrentStep(newStep);
   };
@@ -139,14 +153,45 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
     if (!application || !token) return;
 
     setShowConfirmDialog(false);
-    
+
+    // Front-end validation before submit
+    const requiredFields = [
+      { key: 'studentFirstName', label: 'Nombres del Estudiante' },
+      { key: 'studentLastName', label: 'Apellidos del Estudiante' },
+      { key: 'studentCedula', label: 'Cédula del Estudiante' },
+      { key: 'studentBirthDate', label: 'Fecha de Nacimiento' },
+      { key: 'studentGender', label: 'Género' },
+      { key: 'studentAddress', label: 'Dirección' },
+      { key: 'gradeLevel', label: 'Grado Solicitado' },
+      { key: 'shift', label: 'Jornada' },
+      { key: 'representativeData', label: 'Datos del Representante' },
+    ];
+
+    const missingFields = requiredFields.filter((f) => !(formData as any)[f.key]);
+
+    // Check specialty for BGU
+    const isBGU = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(formData.gradeLevel || '');
+    if (isBGU && !formData.specialty) {
+      missingFields.push({ key: 'specialty', label: 'Especialidad (Bachillerato)' });
+    }
+
+    if (missingFields.length > 0) {
+      toast.error(`Faltan campos requeridos: ${missingFields.map(f => f.label).join(', ')}`);
+      return;
+    }
+
+    if (!formData.acceptedIdeario) {
+      toast.error('Debe aceptar el Ideario Institucional en el último paso.');
+      return;
+    }
+
     // Guardar cambios pendientes
     // IMPORTANT: If save fails, do not proceed to submit
     const saveResult = await handleSave(true); // Call silent, but check result
-    
+
     if (!saveResult.success) {
-        toast.error(`No se pudieron guardar los cambios: ${saveResult.error?.message || 'Error desconocido'}. Por favor revisa los datos.`);
-        return;
+      toast.error(`No se pudieron guardar los cambios: ${saveResult.error?.message || 'Error desconocido'}. Por favor revisa los datos.`);
+      return;
     }
 
     setLoading(true);
@@ -279,7 +324,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
               Asegúrate de haber completado toda la información y cargado todos los documentos requeridos.
             </DialogDescription>
           </DialogHeader>
-            <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-800">
+          <div className="bg-amber-50 p-3 rounded-lg text-sm text-amber-800">
             <p className="font-medium">Antes de continuar, verifica que:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Todos los datos del estudiante estén correctos</li>
@@ -295,7 +340,11 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
               id="ideario"
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               checked={acceptedIdeario}
-              onChange={(e) => setAcceptedIdeario(e.target.checked)}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setAcceptedIdeario(checked);
+                updateFormData({ acceptedIdeario: checked });
+              }}
             />
             <label
               htmlFor="ideario"

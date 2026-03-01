@@ -9,7 +9,7 @@ async function authHeader() {
   // Note: getSession needs to be handled properly. 
   // If we are in a server component, we pass headers. 
   // For now assuming we are calling from client.
-  
+
   // Actually, Shadcn/NextJS approach usually involves server actions or client fetch with token.
   // Let's rely on the session access token if available.
   // We'll implemented a helper to get the token.
@@ -27,7 +27,7 @@ async function authHeader() {
 export async function getRoles(token: string) {
   const res = await fetch(`${API_URL}/users/roles`, {
     headers: {
-       Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
   if (!res.ok) throw new Error('Failed to fetch roles');
@@ -52,12 +52,12 @@ async function handleResponse(res: Response, errorMessage: string) {
       const error = await res.json();
       throw new Error(error.message || errorMessage);
     } catch (e: any) {
-        // If parsing json fails or if header is not json
-        // Check if we already threw the error with message
-        if (e.message !== errorMessage && e.message) {
-            throw e;
-        }
-        throw new Error(errorMessage);
+      // If parsing json fails or if header is not json
+      // Check if we already threw the error with message
+      if (e.message !== errorMessage && e.message) {
+        throw e;
+      }
+      throw new Error(errorMessage);
     }
   }
   return res.json();
@@ -112,7 +112,7 @@ export async function removeRole(token: string, userId: string, roleId: string):
   const res = await fetch(`${API_URL}/users/${userId}/roles/${roleId}`, {
     method: 'DELETE',
     headers: {
-       Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
     },
   });
   return handleResponse(res, 'Failed to remove role');
@@ -127,4 +127,28 @@ export async function resetPassword(token: string, userId: string): Promise<{ me
   });
   if (!res.ok) throw new Error('Failed to reset password');
   return res.json();
+}
+
+export async function bulkApproveUsers(token: string, ids: string[]): Promise<any> {
+  const res = await fetch(`${API_URL}/users/bulk/approve`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids }),
+  });
+  return handleResponse(res, 'Failed to bulk approve users');
+}
+
+export async function bulkRejectUsers(token: string, ids: string[], reason?: string): Promise<any> {
+  const res = await fetch(`${API_URL}/users/bulk/reject`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ ids, reason }),
+  });
+  return handleResponse(res, 'Failed to bulk reject users');
 }

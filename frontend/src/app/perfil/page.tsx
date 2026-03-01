@@ -14,13 +14,13 @@ import { useRoles } from "@/hooks/use-roles";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function MiPerfilPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const { roles } = useRoles();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<any>(null);
-  
+
   // Basic form states
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -36,7 +36,7 @@ export default function MiPerfilPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       if (status !== "authenticated") return;
-      
+
       try {
         // @ts-ignore
         const token = session?.accessToken || session?.user?.accessToken;
@@ -45,9 +45,9 @@ export default function MiPerfilPage() {
             Authorization: `Bearer ${token}`
           }
         });
-        
+
         if (!res.ok) throw new Error("Error al obtener perfil");
-        
+
         const data = await res.json();
         setProfile(data);
         setFirstName(data.firstName || "");
@@ -95,6 +95,18 @@ export default function MiPerfilPage() {
         throw new Error(err.message || "Error al actualizar perfil");
       }
 
+      const updatedName = `${firstName} ${lastName}`.trim();
+
+      if (session) {
+        await update({
+          ...session,
+          user: {
+            ...session.user,
+            name: updatedName
+          }
+        });
+      }
+
       toast.success("Perfil actualizado correctamente");
     } catch (error: any) {
       toast.error(error.message);
@@ -115,10 +127,10 @@ export default function MiPerfilPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-4">
-              <Link 
-                href="/dashboard" 
+              <Link
+                href={roles.includes('apoderado') ? '/apoderado' : '/dashboard'}
                 className="p-2 -ml-2 text-slate-500 hover:text-primary hover:bg-slate-100 rounded-full transition-colors"
-                title="Volver"
+                title="Volver al inicio"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Link>
@@ -133,7 +145,7 @@ export default function MiPerfilPage() {
 
       <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
+
           <div className="md:col-span-1 space-y-6">
             <Card>
               <CardContent className="pt-6">
@@ -182,24 +194,24 @@ export default function MiPerfilPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">Nombres</Label>
-                      <Input 
-                        id="firstName" 
-                        value={firstName} 
-                        onChange={(e) => setFirstName(e.target.value)} 
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
                         placeholder="Tus Nombres"
                         required
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Apellidos</Label>
-                      <Input 
-                        id="lastName" 
-                        value={lastName} 
-                        onChange={(e) => setLastName(e.target.value)} 
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
                         placeholder="Tus Apellidos"
                         required
                       />
@@ -211,10 +223,10 @@ export default function MiPerfilPage() {
                       <Label htmlFor="email">Correo Electrónico (Solo Lectura)</Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          id="email" 
-                          value={session.user.email || ""} 
-                          readOnly 
+                        <Input
+                          id="email"
+                          value={session.user.email || ""}
+                          readOnly
                           className="pl-9 bg-slate-50 text-slate-500 font-medium cursor-not-allowed"
                         />
                       </div>
@@ -223,10 +235,10 @@ export default function MiPerfilPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="cedula">Cédula de Identidad</Label>
-                      <Input 
-                        id="cedula" 
-                        value={cedula} 
-                        onChange={(e) => setCedula(e.target.value.replace(/\D/g, '').substring(0,10))} 
+                      <Input
+                        id="cedula"
+                        value={cedula}
+                        onChange={(e) => setCedula(e.target.value.replace(/\D/g, '').substring(0, 10))}
                         placeholder="1234567890"
                         maxLength={10}
                       />
@@ -235,10 +247,10 @@ export default function MiPerfilPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="telefono">Teléfono de Contacto</Label>
-                    <Input 
-                      id="telefono" 
-                      value={telefono} 
-                      onChange={(e) => setTelefono(e.target.value)} 
+                    <Input
+                      id="telefono"
+                      value={telefono}
+                      onChange={(e) => setTelefono(e.target.value)}
                       placeholder="Ej: 0987654321"
                     />
                   </div>

@@ -3,19 +3,20 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, FileText, Plus, User, LogOut } from 'lucide-react';
+import { Bell, FileText, Plus, User, LogOut, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { NotificationCenter } from '@/components/notification-center';
+import { LayoutDashboard } from 'lucide-react';
 
 export default function ApoderadoLayout({
   children,
@@ -64,6 +65,14 @@ export default function ApoderadoLayout({
               </Link>
             </Button>
 
+            {/* Enlace al Ideario */}
+            <Button variant="outline" size="sm" asChild className="hidden md:flex">
+              <a href="/ideario-institucional.pdf" target="_blank" rel="noopener noreferrer">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Ideario Institucional
+              </a>
+            </Button>
+
             {/* Centro de Notificaciones */}
             <NotificationCenter />
 
@@ -85,13 +94,19 @@ export default function ApoderadoLayout({
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/apoderado/perfil" className="cursor-pointer">
+                  <Link href="/dashboard" className="cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/perfil" className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
                     Mi Perfil
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="text-red-600 cursor-pointer"
                   onClick={() => signOut({ callbackUrl: '/login' })}
                 >

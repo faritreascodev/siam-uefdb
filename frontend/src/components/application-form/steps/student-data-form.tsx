@@ -40,7 +40,7 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
     try {
       setSearching(true);
       const result = await searchByCedula(cedula, token);
-      
+
       if (result) {
         onChange({
           studentFirstName: result.firstName || '',
@@ -107,10 +107,10 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
               maxLength={10}
             />
             <div className="flex justify-end">
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleSearchCedula}
                 disabled={searching || !data.studentCedula || data.studentCedula.length < 10}
                 className="mt-1"
@@ -124,7 +124,7 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
           <div className="space-y-2">
             <Label htmlFor="studentGender">Género *</Label>
             <Select
-              value={data.studentGender || ''}
+              value={data.studentGender || undefined}
               onValueChange={(value) => handleChange('studentGender', value as Gender)}
             >
               <SelectTrigger>
@@ -163,9 +163,9 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
 
       {/* Lugar de Nacimiento */}
       {/* Lugar de Nacimiento */}
-      <LocationSelector 
-        value={data.studentBirthPlace} 
-        onChange={(newPlace) => onChange({ studentBirthPlace: newPlace })} 
+      <LocationSelector
+        value={data.studentBirthPlace}
+        onChange={(newPlace) => onChange({ studentBirthPlace: newPlace })}
       />
 
       <Separator />

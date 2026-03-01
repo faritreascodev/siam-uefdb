@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -12,17 +12,18 @@ import {
 } from "@/components/ui/select";
 import { getUsers } from "@/lib/api-users";
 import { User as UserType } from "@/types/user";
-import { 
-  getApplicationDetail, 
-  putUnderReview, 
-  requestCorrections, 
-  approveApplication, 
+import {
+  getApplicationDetail,
+  putUnderReview,
+  requestCorrections,
+  approveApplication,
   rejectApplication,
   assignToDirectivo,
   addInternalComment,
   downloadApplicationPdf,
   getAvailableParallels,
-  assignParallel
+  assignParallel,
+  validatePayment
 } from '@/lib/api-admin-applications';
 import { Application, STATUS_LABELS, STATUS_COLORS, DOCUMENT_LABELS, GRADE_LEVELS } from '@/types/application';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,9 @@ import {
   UserPlus,
   Send,
   Printer,
+  Shield,
+  CreditCard,
+  FileCheck
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -76,6 +80,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
   const [pdfLoading, setPdfLoading] = useState(false);
   const [correctionText, setCorrectionText] = useState('');
   const [rejectionText, setRejectionText] = useState('');
+  const [paymentRejectionReason, setPaymentRejectionReason] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
   const [newComment, setNewComment] = useState('');
   const [directivoId, setDirectivoId] = useState('');
@@ -101,8 +106,13 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
       if (!token || !id) return;
 
       try {
-        const data = await getApplicationDetail(token, id);
+        const [data, dirs] = await Promise.all([
+          getApplicationDetail(token, id),
+          getUsers(token, 'principal')
+        ]);
         setApplication(data);
+        setDirectivos(dirs);
+        if (data.assignedToId) setDirectivoId(data.assignedToId);
       } catch (error: any) {
         toast.error(error.message || 'Error al cargar solicitud');
         router.push('/admin/admisiones');
@@ -270,6 +280,35 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
     }
   };
 
+  const handleValidatePaymentApprove = async () => {
+    if (!token || !application) return;
+    setActionLoading(true);
+    try {
+      const updated = await validatePayment(token, application.id, true);
+      setApplication(updated);
+      toast.success('Pago validado exitosamente');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleValidatePaymentReject = async () => {
+    if (!token || !application || !paymentRejectionReason.trim()) return;
+    setActionLoading(true);
+    try {
+      const updated = await validatePayment(token, application.id, false, paymentRejectionReason);
+      setApplication(updated);
+      toast.success('Pago rechazado');
+      setPaymentRejectionReason('');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading || !application) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -336,18 +375,31 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
           <CardContent className="space-y-4">
             <InfoRow label="Nombres" value={`${application.studentFirstName} ${application.studentLastName}`} />
             <InfoRow label="Cédula" value={application.studentCedula} />
+            <InfoRow label="Nacionalidad" value={application.studentNationality} />
             <InfoRow label="Género" value={application.studentGender === 'M' ? 'Masculino' : 'Femenino'} />
-            <InfoRow 
-              label="Fecha de Nacimiento" 
-              value={application.studentBirthDate ? format(new Date(application.studentBirthDate), 'dd/MM/yyyy', { locale: es }) : '-'} 
+            <InfoRow
+              label="Fecha de Nacimiento"
+              value={application.studentBirthDate ? format(new Date(application.studentBirthDate), 'dd/MM/yyyy', { locale: es }) : '-'}
             />
             <InfoRow label="Dirección" value={application.studentAddress} />
+            <InfoRow label="Sector" value={application.studentSector} />
             <InfoRow label="Teléfono" value={application.studentPhone} />
             <InfoRow label="Email" value={application.studentEmail} />
             <Separator />
             <InfoRow label="Tipo de Sangre" value={application.bloodType} />
             <InfoRow label="Discapacidad" value={application.hasDisability ? `Sí - ${application.disabilityDetail}` : 'No'} />
             <InfoRow label="Atención Especial" value={application.needsSpecialCare ? `Sí - ${application.specialCareDetail}` : 'No'} />
+            <Separator />
+            <div className="pt-2">
+              <h4 className="text-sm font-semibold mb-2">Lugar de Nacimiento</h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <InfoRow label="País" value={application.studentBirthPlace?.country} />
+                <InfoRow label="Provincia" value={application.studentBirthPlace?.province} />
+                <InfoRow label="Ciudad" value={application.studentBirthPlace?.city} />
+                <InfoRow label="Cantón" value={application.studentBirthPlace?.canton} />
+                <InfoRow label="Parroquia" value={application.studentBirthPlace?.parish} />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -380,22 +432,75 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
         </Card>
 
         {/* Datos Familiares */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Datos del Representante
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <InfoRow label="Nombres" value={(application.representativeData as any)?.names} />
-            <InfoRow label="Parentesco" value={(application.representativeData as any)?.relationship} />
-            <InfoRow label="Cédula" value={(application.representativeData as any)?.cedula} />
-            <InfoRow label="Teléfono" value={(application.representativeData as any)?.phone} />
-            <InfoRow label="Email" value={(application.representativeData as any)?.email} />
-            <InfoRow label="Ocupación" value={(application.representativeData as any)?.occupation} />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Datos del Representante
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <InfoRow label="Nombres" value={(application.representativeData as any)?.names} />
+              <InfoRow label="Parentesco" value={(application.representativeData as any)?.relationship} />
+              <InfoRow label="Cédula" value={(application.representativeData as any)?.cedula} />
+              <InfoRow label="Teléfono" value={(application.representativeData as any)?.phone} />
+              <InfoRow label="Email" value={(application.representativeData as any)?.email} />
+              <InfoRow label="Ocupación" value={(application.representativeData as any)?.occupation} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Datos del Padre
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <InfoRow label="Nombres" value={(application.fatherData as any)?.names} />
+              <InfoRow label="Cédula" value={(application.fatherData as any)?.cedula} />
+              <InfoRow label="Teléfono" value={(application.fatherData as any)?.phone} />
+              <InfoRow label="Vive con estudiante" value={(application.fatherData as any)?.livesWithStudent ? 'Sí' : 'No'} />
+              <InfoRow label="Empresa" value={(application.fatherData as any)?.workPlace} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Datos de la Madre
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <InfoRow label="Nombres" value={(application.motherData as any)?.names} />
+              <InfoRow label="Cédula" value={(application.motherData as any)?.cedula} />
+              <InfoRow label="Teléfono" value={(application.motherData as any)?.phone} />
+              <InfoRow label="Vive con estudiante" value={(application.motherData as any)?.livesWithStudent ? 'Sí' : 'No'} />
+              <InfoRow label="Empresa" value={(application.motherData as any)?.workPlace} />
+            </CardContent>
+          </Card>
+
+          {application.extraContacts && application.extraContacts.length > 0 && (
+            <Card>
+              <CardHeader className="py-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Contactos de Emergencia
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm">
+                {application.extraContacts.map((contact, i) => (
+                  <div key={i} className="space-y-2 border-b last:border-0 pb-3 mb-3 last:mb-0 last:pb-0">
+                    <p className="font-medium text-slate-800">{contact.firstName} {contact.lastName} ({contact.relationship})</p>
+                    <InfoRow label="Teléfono" value={contact.phone} />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Documentos */}
         <Card>
@@ -409,14 +514,15 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
             {application.documents && application.documents.length > 0 ? (
               <div className="space-y-3">
                 {application.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
+                  <div key={doc.id} className="flex flex-col sm:flex-row items-center justify-between p-3 bg-gray-50 rounded-lg gap-3">
+                    <div className="w-full">
                       <p className="font-medium">{DOCUMENT_LABELS[doc.documentType]}</p>
-                      <p className="text-sm text-muted-foreground">{doc.fileName}</p>
+                      <p className="text-sm text-muted-foreground break-all">{doc.fileName}</p>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
+                      className="whitespace-nowrap"
                       onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_URL}${doc.fileUrl}`, '_blank')}
                     >
                       <Eye className="mr-2 h-4 w-4" />
@@ -432,6 +538,73 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
         </Card>
       </div>
 
+      {/* Información de Pago */}
+      {(application.paymentDate || application.paymentReference) && (
+        <Card className="border-teal-200">
+          <CardHeader className="bg-teal-50/50">
+            <CardTitle className="flex items-center gap-2 text-teal-800">
+              <CreditCard className="h-5 w-5" />
+              Información de Pago
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <InfoRow label="Fecha Pago" value={application.paymentDate ? format(new Date(application.paymentDate), 'dd/MM/yyyy', { locale: es }) : 'N/A'} />
+              <InfoRow label="Referencia" value={application.paymentReference || 'N/A'} />
+              <InfoRow label="Estado" value={STATUS_LABELS[application.status]} />
+            </div>
+
+            {application.status === 'PAYMENT_UPLOADED' && (
+              <div className="mt-6 flex flex-wrap gap-3 p-4 bg-teal-50 border border-teal-100 rounded-lg">
+                <Button
+                  onClick={handleValidatePaymentApprove}
+                  disabled={actionLoading}
+                  className="bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Validar y Aprobar Pago
+                </Button>
+
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Rechazar Pago
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Rechazar Pago</DialogTitle>
+                      <DialogDescription>
+                        Indique el motivo del rechazo del pago (ej. ilegible, monto incorrecto, transferencia no reflejada). El apoderado será notificado para volver a subir el comprobante.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Label>Motivo *</Label>
+                      <Textarea
+                        placeholder="Motivo del rechazo de pago..."
+                        value={paymentRejectionReason}
+                        onChange={(e) => setPaymentRejectionReason(e.target.value)}
+                      />
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline">Cancelar</Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleValidatePaymentReject}
+                        disabled={!paymentRejectionReason.trim() || actionLoading}
+                      >
+                        Rechazar Pago
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
 
 
       {/* Acciones de Revisión y Matriculación */}
@@ -439,10 +612,10 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
         (() => {
           // @ts-ignore
           const userRoles = session?.user?.roles || [];
-          const canProcessApplications = userRoles.some((r: string) => 
+          const canProcessApplications = userRoles.some((r: string) =>
             ['secretary', 'principal', 'directivo', 'superadmin'].includes(r)
           );
-          
+
           if (!canProcessApplications) return null;
 
           return (
@@ -575,15 +748,15 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                 )}
 
                 {/* MATRICULACIÓN / ASIGNACIÓN DE PARALELO */}
-                {['APPROVED', 'PAYMENT_VALIDATED'].includes(application.status) && (
+                {application.status === 'PAYMENT_VALIDATED' && (
                   <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
                     <DialogTrigger asChild>
-                      <Button 
+                      <Button
                         className="bg-purple-600 hover:bg-purple-700"
                         onClick={handleOpenAssign}
                         disabled={loadingParallels}
                       >
-                         {loadingParallels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}
+                        {loadingParallels ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <GraduationCap className="mr-2 h-4 w-4" />}
                         Asignar Paralelo y Matricular
                       </Button>
                     </DialogTrigger>
@@ -594,7 +767,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                           Seleccione el paralelo para matricular al estudiante.
                         </DialogDescription>
                       </DialogHeader>
-                      
+
                       <div className="py-4 space-y-4">
                         {loadingParallels ? (
                           <div className="flex justify-center p-4">
@@ -603,7 +776,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                         ) : (
                           <div className="grid grid-cols-1 gap-3">
                             {parallels.map((p) => (
-                              <div 
+                              <div
                                 key={p.parallel}
                                 className={`
                                   border rounded-lg p-3 cursor-pointer transition-all
@@ -619,7 +792,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                                   </Badge>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
-                                  <div 
+                                  <div
                                     className={`h-2 rounded-full ${p.available === 0 ? 'bg-gray-400' : 'bg-purple-600'}`}
                                     style={{ width: `${Math.min(100, (p.used / p.totalQuota) * 100)}%` }}
                                   ></div>
@@ -685,7 +858,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                 <p className="text-muted-foreground text-center py-4">No hay comentarios</p>
               )}
             </div>
-            
+
             {/* Agregar comentario */}
             <div className="flex gap-2">
               <Textarea
@@ -695,7 +868,7 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
                 rows={2}
                 className="flex-1"
               />
-              <Button 
+              <Button
                 onClick={handleAddComment}
                 disabled={!newComment.trim() || actionLoading}
                 size="icon"
@@ -707,6 +880,53 @@ export default function ApplicationDetailPage({ params }: ApplicationDetailPageP
           </CardContent>
         </Card>
 
+        {/* Asignación a Directivo */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              Escalar a Directivo
+            </CardTitle>
+            <CardDescription>Asigne esta solicitud a un directivo para decisión final</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="directivo">Seleccionar Directivo</Label>
+              <Select value={directivoId} onValueChange={setDirectivoId}>
+                <SelectTrigger id="directivo">
+                  <SelectValue placeholder="Seleccione un directivo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {directivos.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.firstName} {d.lastName}
+                    </SelectItem>
+                  ))}
+                  {directivos.length === 0 && (
+                    <div className="p-2 text-sm text-center text-muted-foreground">
+                      No hay directivos registrados
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleAssign}
+              disabled={!directivoId || actionLoading || application.assignedToId === directivoId}
+            >
+              {actionLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              {application.assignedToId ? 'Reasignar' : 'Asignar'}
+            </Button>
+
+            {application.assignedTo && (
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800 flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                <span>Asignado actualmente a: <strong>{application.assignedTo.firstName} {application.assignedTo.lastName}</strong></span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

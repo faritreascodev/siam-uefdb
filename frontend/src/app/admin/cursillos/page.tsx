@@ -34,9 +34,9 @@ export default function AdminCursillosPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ 
-    status: 'ALL', 
-    gradeLevel: 'ALL', 
+  const [filters, setFilters] = useState({
+    status: 'ALL',
+    gradeLevel: 'ALL',
     search: '',
   });
   const limit = 15;
@@ -57,12 +57,12 @@ export default function AdminCursillosPage() {
         page,
         limit,
       });
-      
+
       // Filtrar localmente solo los grados que aplican para cursillo si piden "ALL"
       // Lo ideal es que el backend tenga un filtro "gradeLevelIn", pero lo manejamos así por simplicidad del MVP
       let filteredData = paginatedData.data;
       if (filters.gradeLevel === 'ALL') {
-         filteredData = filteredData.filter(app => ['8vo EGB', '1ero BGU'].includes(app.gradeLevel || ''));
+        filteredData = filteredData.filter(app => ['8vo_basico', '1ro_bachillerato'].includes(app.gradeLevel || ''));
       }
 
       setApplications(filteredData);
@@ -125,7 +125,7 @@ export default function AdminCursillosPage() {
                 />
               </div>
             </div>
-            
+
             <div className="w-full md:w-48">
               <Select
                 value={filters.gradeLevel}
@@ -135,9 +135,9 @@ export default function AdminCursillosPage() {
                   <SelectValue placeholder="Grado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">8vo EGB y 1ero BGU</SelectItem>
-                  <SelectItem value="8vo EGB">8vo EGB</SelectItem>
-                  <SelectItem value="1ero BGU">1ero BGU</SelectItem>
+                  <SelectItem value="ALL">8vo Básico y 1ro Bachillerato</SelectItem>
+                  <SelectItem value="8vo_basico">8vo Básico</SelectItem>
+                  <SelectItem value="1ro_bachillerato">1ro Bachillerato</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -206,7 +206,7 @@ export default function AdminCursillosPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {app.cursilloDate 
+                        {app.cursilloDate
                           ? format(new Date(app.cursilloDate), "dd MMM yyyy", { locale: es })
                           : <span className="text-muted-foreground">Pendiente</span>}
                       </TableCell>
