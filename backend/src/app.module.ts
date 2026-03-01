@@ -15,6 +15,7 @@ import { ExternalApisModule } from './external-apis/external-apis.module';
 import { ExtraContactsModule } from './extra-contacts/extra-contacts.module';
 import { AuditModule } from './audit/audit.module';
 import { SystemConfigModule } from './system-config/system-config.module';
+import { CursilloModule } from './cursillo/cursillo.module';
 
 @Module({
   imports: [
@@ -28,16 +29,15 @@ import { SystemConfigModule } from './system-config/system-config.module';
     NotificationsModule,
     UploadsModule,
     QuotasModule,
-    QuotasModule,
     InstitutionsModule,
     ReportsModule,
     ExternalApisModule,
     ExtraContactsModule,
     AuditModule,
     SystemConfigModule,
+    CursilloModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }
-
