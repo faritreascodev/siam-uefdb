@@ -28,20 +28,20 @@ enum Parentesco {
 
 // User model with authentication and role relationship
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String   // Hashed password with bcrypt
+  id        String  @id @default(uuid())
+  email     String  @unique
+  password  String // Hashed password with bcrypt
   firstName String?
   lastName  String?
-  isActive  Boolean  @default(true) // Deprecated in favor of status, keep for backward compatibility
-  
+  isActive  Boolean @default(true) // Deprecated in favor of status, keep for backward compatibility
+
   // New fields for MVP Auth
-  cedula        String?     @unique
-  telefono      String?
-  direccion     String?
-  parentesco    Parentesco?
-  status        UserStatus  @default(PENDIENTE_APROBACION)
-  
+  cedula     String?     @unique
+  telefono   String?
+  direccion  String?
+  parentesco Parentesco?
+  status     UserStatus  @default(PENDIENTE_APROBACION)
+
   // Approval tracking
   approvedBy    String?
   approvedAt    DateTime?
@@ -55,16 +55,16 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Many-to-Many relationship with Role
-  roles     UserRole[]
-  
+  roles UserRole[]
+
   // One-to-Many relationship with Recovery Requests
   recoveryRequests PasswordRecoveryRequest[]
-  
+
   // Admission Module Relations
-  applications  Application[]
-  notifications Notification[]
-  assignedApplications Application[] @relation("AssignedApplications")
-  processedApplications Application[] @relation("ProcessedApplications")
+  applications          Application[]
+  notifications         Notification[]
+  assignedApplications  Application[]  @relation("AssignedApplications")
+  processedApplications Application[]  @relation("ProcessedApplications")
 
   @@index([email])
   @@map("users")
@@ -79,7 +79,7 @@ model Role {
   updatedAt   DateTime @updatedAt
 
   // Many-to-Many relationship with User
-  users       UserRole[]
+  users UserRole[]
 
   @@index([name])
   @@map("roles")
@@ -87,9 +87,9 @@ model Role {
 
 // Join table for User-Role many-to-many relationship
 model UserRole {
-  id        String   @id @default(uuid())
-  userId    String
-  roleId    String
+  id         String   @id @default(uuid())
+  userId     String
+  roleId     String
   assignedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -103,20 +103,20 @@ model UserRole {
 
 // Password Recovery Requests (Option B)
 model PasswordRecoveryRequest {
-  id          String    @id @default(uuid())
-  userId      String
-  cedula      String
-  email       String
-  motivo      String?
-  status      String    @default("PENDIENTE") // PENDIENTE, APROBADA, RECHAZADA
-  
-  resolvedBy  String?
-  resolvedAt  DateTime?
+  id     String  @id @default(uuid())
+  userId String
+  cedula String
+  email  String
+  motivo String?
+  status String  @default("PENDIENTE") // PENDIENTE, APROBADA, RECHAZADA
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  resolvedBy String?
+  resolvedAt DateTime?
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([status])
@@ -132,13 +132,14 @@ enum ApplicationStatus {
   DRAFT
   SUBMITTED
   UNDER_REVIEW
-  CURSILLO_SCHEDULED    // Cursillo programado (solo 8vo y 1ero BGU)
-  CURSILLO_APPROVED     // Cursillo aprobado
-  CURSILLO_REJECTED     // Cursillo no aprobado
+  CURSILLO_SCHEDULED // Cursillo programado (solo 8vo y 1ero BGU)
+  CURSILLO_APPROVED // Cursillo aprobado
+  CURSILLO_REJECTED // Cursillo no aprobado
   REQUIRES_CORRECTION
   APPROVED
-  PAYMENT_VALIDATED   // Pago de matrícula validado (NUEVO)
-  MATRICULATED        // Estudiante matriculado con paralelo asignado (NUEVO)
+  PAYMENT_UPLOADED // Pago cargado por el apoderado (NUEVO)
+  PAYMENT_VALIDATED // Pago de matrícula validado (NUEVO)
+  MATRICULATED // Estudiante matriculado con paralelo asignado (NUEVO)
   REJECTED
 }
 
@@ -164,6 +165,7 @@ enum DocumentType {
   STUDENT_PHOTO
   GRADE_CERTIFICATE
   UTILITY_BILL
+  PAYMENT_RECEIPT
 }
 
 enum NotificationType {
@@ -175,6 +177,9 @@ enum NotificationType {
   APPLICATION_UNDER_REVIEW
   DOCUMENT_REQUIRED
   MATRICULATED
+  PAYMENT_UPLOADED
+  PAYMENT_VALIDATED
+  PAYMENT_REJECTED
 }
 
 enum NotificationPriority {
@@ -186,88 +191,93 @@ enum NotificationPriority {
 
 // Application (Solicitud de Admisión)
 model Application {
-  id                String            @id @default(uuid())
-  status            ApplicationStatus @default(DRAFT)
-  submittedAt       DateTime?
-  
+  id          String            @id @default(uuid())
+  status      ApplicationStatus @default(DRAFT)
+  submittedAt DateTime?
+
   // Datos del Estudiante
-  studentFirstName  String?
-  studentLastName   String?
-  studentCedula     String?           @unique
-  studentBirthDate  DateTime?
-  studentBirthPlace Json?             // { country, province, city }
-  studentGender     Gender?
-  studentNationality String?          // NUEVO: Nacionalidad
-  studentAddress    String?
-  studentSector     String?
-  studentPhone      String?
-  studentEmail      String?
-  
+  studentFirstName   String?
+  studentLastName    String?
+  studentCedula      String?   @unique
+  studentBirthDate   DateTime?
+  studentBirthPlace  Json? // { country, province, city }
+  studentGender      Gender?
+  studentNationality String? // NUEVO: Nacionalidad
+  studentAddress     String?
+  studentSector      String?
+  studentPhone       String?
+  studentEmail       String?
+
   // Datos Médicos
   bloodType         String?
-  hasDisability     Boolean           @default(false)
+  hasDisability     Boolean @default(false)
   disabilityDetail  String?
-  needsSpecialCare  Boolean           @default(false)
+  needsSpecialCare  Boolean @default(false)
   specialCareDetail String?
-  
+
   // Datos Académicos
-  gradeLevel        String?
-  shift             Shift?
-  specialty         String?           // Solo para Bachillerato (Ciencias, Técnico, etc.)
-  previousSchool    String?
-  lastYearAverage   Decimal?
-  hasRepeatedYear   Boolean           @default(false)
+  gradeLevel         String?
+  shift              Shift?
+  specialty          String? // Solo para Bachillerato (Ciencias, Técnico, etc.)
+  previousSchool     String?
+  lastYearAverage    Decimal?
+  hasRepeatedYear    Boolean  @default(false)
   repeatedYearDetail String?
-  
+
   // Datos Familiares (JSON para flexibilidad)
-  fatherData        Json?             // { names, cedula, phone, email, occupation, ... }
-  motherData        Json?
-  representativeData Json?            // { names, cedula, relationship, ... }
-  
+  fatherData         Json? // { names, cedula, phone, email, occupation, ... }
+  motherData         Json?
+  representativeData Json? // { names, cedula, relationship, ... }
+
   // Documentos
-  documents         ApplicationDocument[]
-  
+  documents ApplicationDocument[]
+
   // Relación con el Apoderado (usuario que crea la solicitud)
-  userId            String
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Asignación a Directivo (para escalamiento)
-  assignedToId      String?
-  assignedTo        User?             @relation("AssignedApplications", fields: [assignedToId], references: [id])
-  assignedAt        DateTime?
-  
+  assignedToId String?
+  assignedTo   User?     @relation("AssignedApplications", fields: [assignedToId], references: [id])
+  assignedAt   DateTime?
+
   // Secretaria que procesó la solicitud
-  processedById     String?
-  processedBy       User?             @relation("ProcessedApplications", fields: [processedById], references: [id])
-  processedAt       DateTime?
-  
+  processedById String?
+  processedBy   User?     @relation("ProcessedApplications", fields: [processedById], references: [id])
+  processedAt   DateTime?
+
   // Cursillo (solo para 8vo y 1ero BGU)
-  cursilloScheduled Boolean           @default(false)
+  cursilloScheduled Boolean        @default(false)
   cursilloDate      DateTime?
-  cursilloResult    CursilloResult    @default(PENDING)
-  cursilloNotes     String?           // Observaciones del cursillo
-  
+  cursilloResult    CursilloResult @default(PENDING)
+  cursilloNotes     String? // Observaciones del cursillo
+
   // Ideario UEFDB
-  acceptedIdeario   Boolean           @default(false)
-  acceptedAt        DateTime?
-  
+  acceptedIdeario Boolean   @default(false)
+  acceptedAt      DateTime?
+
+  // Datos de Pago de Matrícula
+  paymentDate      DateTime?
+  paymentReference String?
+  paymentAmount    Decimal?
+
   // Asignación de Paralelo (para control de cupos específicos)
-  assignedParallel  String?           // Ej: "A", "B", "Unico"
-  
+  assignedParallel String? // Ej: "A", "B", "Unico"
+
   // Observaciones del Admin
   adminNotes        String?
   rejectionReason   String?
   correctionRequest String?
-  internalComments  Json?             // NUEVO: [{ userId, userName, comment, createdAt }]
-  
+  internalComments  Json? // NUEVO: [{ userId, userName, comment, createdAt }]
+
   // Notificaciones relacionadas
-  notifications     Notification[]
-  
+  notifications Notification[]
+
   // Contactos adicionales (Máximo 3 por app)
-  extraContacts     ExtraContact[]
-  
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  extraContacts ExtraContact[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -277,17 +287,17 @@ model Application {
 
 // Documentos de la Solicitud
 model ApplicationDocument {
-  id             String       @id @default(uuid())
-  applicationId  String
-  application    Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  
-  documentType   DocumentType
-  fileName       String
-  fileUrl        String       // Ruta en storage
-  fileSize       Int          // bytes
-  mimeType       String       // application/pdf, image/jpeg, etc.
-  
-  uploadedAt     DateTime     @default(now())
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  documentType DocumentType
+  fileName     String
+  fileUrl      String // Ruta en storage
+  fileSize     Int // bytes
+  mimeType     String // application/pdf, image/jpeg, etc.
+
+  uploadedAt DateTime @default(now())
 
   @@index([applicationId])
   @@map("application_documents")
@@ -295,56 +305,55 @@ model ApplicationDocument {
 
 // Sistema de Notificaciones In-App
 model Notification {
-  id            String               @id @default(uuid())
-  userId        String
-  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  type          NotificationType
-  priority      NotificationPriority @default(NORMAL)
-  title         String
-  message       String
-  
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type     NotificationType
+  priority NotificationPriority @default(NORMAL)
+  title    String
+  message  String
+
   // Relación opcional con la solicitud
   applicationId String?
-  application   Application?         @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  
+  application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+
   // Estado de lectura
-  isRead        Boolean              @default(false)
-  readAt        DateTime?
-  
-  createdAt     DateTime             @default(now())
-  expiresAt     DateTime?
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  createdAt DateTime  @default(now())
+  expiresAt DateTime?
 
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
 }
 
-
 // ========================================
 // QUOTA MANAGEMENT MODULE
 // ========================================
 
 model AdmissionQuota {
-  id           String   @id @default(uuid())
-  
+  id String @id @default(uuid())
+
   // Configuración
-  level        String   // Ej: "Inicial 1 (3 años)", "1ero EGB"
-  parallel     String   // Ej: "Único", "A", "B"
-  shift        String   // "Matutina" / "Vespertina"
-  specialty    String?  // Ej: "Ciencias", "Técnico Informática"
-  
+  level     String // Ej: "Inicial 1 (3 años)", "1ero EGB"
+  parallel  String // Ej: "Único", "A", "B"
+  shift     String // "Matutina" / "Vespertina"
+  specialty String? // Ej: "Ciencias", "Técnico Informática"
+
   // Cupos
-  totalQuota   Int      // Cupos totales configurados
-  
+  totalQuota Int // Cupos totales configurados
+
   // Año lectivo
-  academicYear String   @default("2026-2027")
-  
+  academicYear String @default("2026-2027")
+
   // Auditoría
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdBy    String?
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  createdBy String?
+
   // Índice único para evitar duplicados
   @@unique([level, parallel, shift, specialty, academicYear], name: "quotaIdentifier")
   @@map("admission_quotas")
@@ -358,17 +367,56 @@ model ExtraContact {
   id            String      @id @default(uuid())
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  
-  cedula        String
-  firstName     String
-  lastName      String
-  email         String?     // Opcional
-  phone         String
-  relationship  String      // Ej: "Abuelo/a", "Tío/a", "Hermano/a", "Otro"
-  
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+
+  cedula       String
+  firstName    String
+  lastName     String
+  email        String? // Opcional
+  phone        String
+  relationship String // Ej: "Abuelo/a", "Tío/a", "Hermano/a", "Otro"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([applicationId])
   @@map("extra_contacts")
+}
+
+// ========================================
+// AUDIT LOGS MODULE
+// ========================================
+
+model AuditLog {
+  id       String  @id @default(uuid())
+  action   String // Ej: "APPROVE_APPLICATION", "CREATE_USER", "UPDATE_QUOTA"
+  entity   String // Ej: "Application", "User", "AdmissionQuota"
+  entityId String? // ID del registro afectado
+  details  Json? // Información adicional (cambios realizados, etc)
+
+  userId    String? // Quién realizó la acción
+  userEmail String? // Email para referencia rápida
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([userId])
+  @@index([entityId])
+  @@map("audit_logs")
+}
+
+// ========================================
+// SYSTEM CONFIGURATION
+// ========================================
+
+model SystemConfig {
+  id          String  @id @default(uuid())
+  key         String  @unique // Ej: "CURRENT_ACADEMIC_YEAR", "ADMISSION_OPEN"
+  value       String
+  description String?
+
+  updatedAt DateTime @updatedAt
+  updatedBy String? // ID del admin que cambió la config
+
+  @@map("system_configs")
 }

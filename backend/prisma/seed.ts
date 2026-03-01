@@ -101,61 +101,153 @@ async function main() {
 
   console.log(`✅ Regular user created: ${userEmail}`);
 
+  // 3b. Crear Secretaria
+  const secretaryEmail = 'secretaria@academyc.com';
+  const hashedSecretaryPassword = await bcrypt.hash('Secretaria123!', 10);
+
+  const secretaryUser = await prisma.user.upsert({
+    where: { email: secretaryEmail },
+    update: {},
+    create: {
+      email: secretaryEmail,
+      password: hashedSecretaryPassword,
+      firstName: 'Ana',
+      lastName: 'Secretaria',
+      status: 'ACTIVO',
+      isActive: true,
+      cedula: '0888888888',
+    },
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: secretaryUser.id,
+        roleId: createdRoles['secretary'],
+      },
+    },
+    update: {},
+    create: {
+      userId: secretaryUser.id,
+      roleId: createdRoles['secretary'],
+    },
+  });
+
+  console.log(`✅ Secretary user created: ${secretaryEmail}`);
+
+  // 3c. Crear Directivo (Principal)
+  const principalEmail = 'rector@academyc.com';
+  const hashedPrincipalPassword = await bcrypt.hash('Rector123!', 10);
+
+  const principalUser = await prisma.user.upsert({
+    where: { email: principalEmail },
+    update: {},
+    create: {
+      email: principalEmail,
+      password: hashedPrincipalPassword,
+      firstName: 'Carlos',
+      lastName: 'Rector',
+      status: 'ACTIVO',
+      isActive: true,
+      cedula: '0777777777',
+    },
+  });
+
+  await prisma.userRole.upsert({
+    where: {
+      userId_roleId: {
+        userId: principalUser.id,
+        roleId: createdRoles['principal'],
+      },
+    },
+    update: {},
+    create: {
+      userId: principalUser.id,
+      roleId: createdRoles['principal'],
+    },
+  });
+
+  console.log(`✅ Principal user created: ${principalEmail}`);
+
   // 4. Crear Cupos Iniciales (2026-2027)
   console.log('📦 Seeding Admission Quotas...');
-  
+
   const quotasSeed = [
-    // Inicial - Matutina
-    { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 30 },
-    { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 35 },
-    
-    // Inicial - Vespertina
-    { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
-    { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
-    
-    // EGB - Vespertina
+    // Inicial - Matutina/Vespertina (SÓLO 20 cupos, único paralelo)
+    { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 20 },
+    { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 20 },
+    { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 20 },
+    { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 20 },
+
+    // EGB - Vespertina (Paralelos A, B, C ; 25-35 máximo, 30 por defecto)
     { level: "1ero EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "1ero EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "1ero EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "2do EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "2do EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "2do EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "3ero EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "3ero EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "3ero EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "4to EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "4to EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "4to EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "5to EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "5to EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "5to EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "6to EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "6to EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "6to EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "7mo EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "7mo EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
-    
+    { level: "7mo EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     // 8vo EGB - Matutina
     { level: "8vo EGB", parallel: "A", shift: "Matutina", specialty: null, totalQuota: 30 },
     { level: "8vo EGB", parallel: "B", shift: "Matutina", specialty: null, totalQuota: 30 },
-    
+    { level: "8vo EGB", parallel: "C", shift: "Matutina", specialty: null, totalQuota: 30 },
+
     // 8vo-10mo EGB - Vespertina
     { level: "8vo EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "8vo EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "8vo EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "9no EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "9no EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
+    { level: "9no EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
     { level: "10mo EGB", parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
     { level: "10mo EGB", parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 },
-    
-    // BGU - Vespertina - Ciencias
-    { level: "1ero BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    { level: "1ero BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    { level: "2do BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    { level: "2do BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    { level: "3ero BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    { level: "3ero BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-    
-    // BGU - Vespertina - Técnico Informática
-    { level: "1ero BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-    { level: "1ero BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-    { level: "2do BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-    { level: "2do BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-    { level: "3ero BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-    { level: "3ero BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
+    { level: "10mo EGB", parallel: "C", shift: "Vespertina", specialty: null, totalQuota: 30 },
+
+    // BGU - Vespertina - Ciencias (A, B, C)
+    { level: "1ero BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "1ero BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "1ero BGU", parallel: "C", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+
+    { level: "2do BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "2do BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "2do BGU", parallel: "C", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+
+    { level: "3ero BGU", parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "3ero BGU", parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+    { level: "3ero BGU", parallel: "C", shift: "Vespertina", specialty: "Ciencias", totalQuota: 30 },
+
+    // BGU - Vespertina - Técnico Informática (Solo A, B)
+    { level: "1ero BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
+    { level: "1ero BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
+
+    { level: "2do BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
+    { level: "2do BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
+
+    { level: "3ero BGU", parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
+    { level: "3ero BGU", parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 30 },
   ];
 
   for (const quota of quotasSeed) {
@@ -184,7 +276,7 @@ async function main() {
       });
     }
   }
-  
+
   console.log(`✅ Seeded ${quotasSeed.length} quota configurations`);
 
   console.log('\n🎉 Seed completed successfully!\n');
@@ -199,6 +291,14 @@ async function main() {
   console.log('   Email: apoderado@academyc.com');
   console.log('   Password: Guardian123!');
   console.log('   Role: apoderado\n');
+  console.log('👤 Secretary User:');
+  console.log('   Email: secretaria@academyc.com');
+  console.log('   Password: Secretaria123!');
+  console.log('   Role: secretary\n');
+  console.log('👤 Principal User (Rector):');
+  console.log('   Email: rector@academyc.com');
+  console.log('   Password: Rector123!');
+  console.log('   Role: principal\n');
   console.log('=================================\n');
 }
 
