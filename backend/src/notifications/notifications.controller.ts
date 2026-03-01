@@ -13,7 +13,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   // Obtener mis notificaciones
   @Get()
@@ -22,7 +22,7 @@ export class NotificationsController {
     @Query('unread') unread?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.notificationsService.findByUser(req.user.sub, {
+    return this.notificationsService.findByUser(req.user.id, {
       isRead: unread === 'true' ? false : undefined,
       limit: limit ? parseInt(limit, 10) : undefined,
     });
@@ -31,18 +31,18 @@ export class NotificationsController {
   // Obtener conteo de no leídas
   @Get('unread-count')
   getUnreadCount(@Request() req: any) {
-    return this.notificationsService.getUnreadCount(req.user.sub);
+    return this.notificationsService.getUnreadCount(req.user.id);
   }
 
   // Marcar una como leída
   @Post(':id/read')
   markAsRead(@Param('id') id: string, @Request() req: any) {
-    return this.notificationsService.markAsRead(id, req.user.sub);
+    return this.notificationsService.markAsRead(id, req.user.id);
   }
 
   // Marcar todas como leídas
   @Post('read-all')
   markAllAsRead(@Request() req: any) {
-    return this.notificationsService.markAllAsRead(req.user.sub);
+    return this.notificationsService.markAllAsRead(req.user.id);
   }
 }

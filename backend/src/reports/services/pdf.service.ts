@@ -1,6 +1,8 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
 import { Browser } from 'puppeteer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class PdfService implements OnModuleInit, OnModuleDestroy {
@@ -21,10 +23,10 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
 
   async generateApplicationPdf(application: any): Promise<Buffer> {
     const page = await this.browser.newPage();
-    
+
     const htmlContent = this.getHtmlTemplate(application);
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    
+
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -41,6 +43,25 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
   }
 
   private getHtmlTemplate(app: any): string {
+    // Helpers de traducción
+    const shiftLabel = (s: string) => s === 'MORNING' ? 'Matutina' : s === 'AFTERNOON' ? 'Vespertina' : s || '-';
+    const genderLabel = (g: string) => g === 'M' ? 'Masculino' : g === 'F' ? 'Femenino' : g || '-';
+    const specialtyLabel = (s: string) => s === 'CIENCIAS' ? 'BGU Ciencias' : s === 'TECNICO_INFORMATICA' ? 'BGU Técnico Informática' : s || 'N/A';
+    const statusLabel = (s: string) => ({
+      DRAFT: 'Borrador', SUBMITTED: 'Enviada', UNDER_REVIEW: 'En Revisión', APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada', REQUIRES_CORRECTION: 'Requiere Corrección', MATRICULATED: 'Matriculada',
+      CURSILLO_SCHEDULED: 'Cursillo Programado', CURSILLO_APPROVED: 'Cursillo Aprobado',
+      PAYMENT_UPLOADED: 'Pago Cargado', PAYMENT_VALIDATED: 'Pago Validado',
+    })[s] || s;
+    const gradeLevelLabel = (g: string) => ({
+      'inicial_1': 'Inicial 1', 'inicial_2': 'Inicial 2',
+      '1ro_basico': '1ro Básico', '2do_basico': '2do Básico', '3ro_basico': '3ro Básico',
+      '4to_basico': '4to Básico', '5to_basico': '5to Básico', '6to_basico': '6to Básico',
+      '7mo_basico': '7mo Básico', '8vo_basico': '8vo Básico', '9no_basico': '9no Básico',
+      '10mo_basico': '10mo Básico', '1ro_bachillerato': '1ro Bachillerato',
+      '2do_bachillerato': '2do Bachillerato', '3ro_bachillerato': '3ro Bachillerato',
+    })[g] || g || '-';
+
     return `
       <!DOCTYPE html>
       <html>
@@ -67,24 +88,45 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
       </head>
       <body>
         <div class="header" style="position: relative;">
-          <!-- Logo Placeholder -->
-          <img src="http://localhost:4000/uploads/logo.png" style="position: absolute; left: 0; top: 0; height: 60px;" />
+          ${(() => {
+        try {
+          // Intenta cargar el logo local
+          const logoPath = path.join(__dirname, '..', 'assets', 'logo-uefdb.png');
+          if (fs.existsSync(logoPath)) {
+            const logoBuffer = fs.readFileSync(logoPath);
+            const base64Logo = logoBuffer.toString('base64');
+            return `<img src="data:image/png;base64,${base64Logo}" style="position: absolute; left: 0; top: 0; height: 60px;" />`;
+          } else {
+            // Fallback for when running directly from src without Nest CLI assets setup yet
+            const fallbackPath = path.join(process.cwd(), 'src', 'reports', 'assets', 'logo-uefdb.png');
+            if (fs.existsSync(fallbackPath)) {
+              const logoBuffer = fs.readFileSync(fallbackPath);
+              const base64Logo = logoBuffer.toString('base64');
+              return `<img src="data:image/png;base64,${base64Logo}" style="position: absolute; left: 0; top: 0; height: 60px;" />`;
+            }
+          }
+        } catch (e) {
+          console.error("No se pudo cargar el logo", e);
+        }
+        return '';
+      })()}
           
           <h1>Ficha de Admisión</h1>
+          <p>Unidad Educativa Fiscomisional Don Bosco</p>
           <p>Periodo Lectivo 2026 - 2027</p>
           <div style="margin-top: 10px;">
-            <span class="status-badge status-${app.status}">${app.status}</span>
+            <span class="status-badge">${statusLabel(app.status)}</span>
           </div>
 
           ${(() => {
-            const photoDoc = app.documents?.find((d: any) => d.documentType === 'STUDENT_PHOTO');
-            if (photoDoc) {
-              // Ensure we use the correct backend URL for the image
-              const photoUrl = photoDoc.fileUrl.startsWith('http') ? photoDoc.fileUrl : `http://localhost:${process.env.PORT || 4000}${photoDoc.fileUrl}`;
-              return `<img src="${photoUrl}" style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;" />`;
-            }
-            return '<div style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px;">FOTO</div>';
-          })()}
+        const photoDoc = app.documents?.find((d: any) => d.documentType === 'STUDENT_PHOTO');
+        if (photoDoc) {
+          // Ensure we use the correct backend URL for the image
+          const photoUrl = photoDoc.fileUrl.startsWith('http') ? photoDoc.fileUrl : `http://localhost:${process.env.PORT || 4000}${photoDoc.fileUrl}`;
+          return `<img src="${photoUrl}" style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;" />`;
+        }
+        return '<div style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px;">FOTO</div>';
+      })()}
         </div>
 
         <div class="section">
@@ -94,7 +136,7 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
             <div class="field"><span class="label">Apellidos:</span> <span class="value">${app.studentLastName || '-'}</span></div>
             <div class="field"><span class="label">Cédula:</span> <span class="value">${app.studentCedula || '-'}</span></div>
             <div class="field"><span class="label">Fecha Nacimiento:</span> <span class="value">${app.studentBirthDate ? new Date(app.studentBirthDate).toLocaleDateString() : '-'}</span></div>
-            <div class="field"><span class="label">Género:</span> <span class="value">${app.studentGender || '-'}</span></div>
+            <div class="field"><span class="label">Género:</span> <span class="value">${genderLabel(app.studentGender)}</span></div>
             <div class="field"><span class="label">Dirección:</span> <span class="value">${app.studentAddress || '-'}</span></div>
           </div>
         </div>
@@ -102,11 +144,11 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
         <div class="section">
           <div class="section-title">Datos Académicos</div>
           <div class="grid">
-            <div class="field"><span class="label">Grado Solicitado:</span> <span class="value">${app.gradeLevel || '-'}</span></div>
-            <div class="field"><span class="label">Jornada:</span> <span class="value">${app.shift || '-'}</span></div>
-            <div class="field"><span class="label">Especialidad:</span> <span class="value">${app.specialty || 'N/A'}</span></div>
+            <div class="field"><span class="label">Grado Solicitado:</span> <span class="value">${gradeLevelLabel(app.gradeLevel)}</span></div>
+            <div class="field"><span class="label">Jornada:</span> <span class="value">${shiftLabel(app.shift)}</span></div>
+            <div class="field"><span class="label">Especialidad:</span> <span class="value">${specialtyLabel(app.specialty)}</span></div>
             <div class="field"><span class="label">Institución Anterior:</span> <span class="value">${app.previousSchool || '-'}</span></div>
-            <div class="field"><span class="label">Promedio Anterior:</span> <span class="value">${app.lastYearAverage || '-'}</span></div>
+            <div class="field"><span class="label">Promedio Anterior:</span> <span class="value">${app.lastYearAverage != null ? Number(app.lastYearAverage).toFixed(2) : '-'}</span></div>
           </div>
         </div>
 

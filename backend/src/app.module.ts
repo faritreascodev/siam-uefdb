@@ -13,6 +13,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ExternalApisModule } from './external-apis/external-apis.module';
 import { ExtraContactsModule } from './extra-contacts/extra-contacts.module';
+import { AuditModule } from './audit/audit.module';
+import { SystemConfigModule } from './system-config/system-config.module';
 
 @Module({
   imports: [
@@ -31,9 +33,11 @@ import { ExtraContactsModule } from './extra-contacts/extra-contacts.module';
     ReportsModule,
     ExternalApisModule,
     ExtraContactsModule,
+    AuditModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
 

@@ -4,33 +4,39 @@ import { PdfService } from './services/pdf.service';
 import { ApplicationsService } from '../applications/applications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ModuleAccessGuard } from '../auth/guards/module-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ModuleAccess } from '../auth/decorators/module-access.decorator';
 
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
+@ModuleAccess('reportes')
 export class ReportsController {
   constructor(
     private pdfService: PdfService,
     private applicationsService: ApplicationsService,
     private reportsService: ReportsService
-  ) {}
+  ) { }
 
   @Get('stats/dashboard')
-  @Roles('admin', 'directivo')
+  @Roles('admin', 'directivo', 'secretary') // allowing secretary just in case they are granted 'reportes' module
+  @ModuleAccess('dashboard')
   async getDashboardStats() {
     return this.reportsService.getDashboardStats();
   }
 
   @Get('stats/levels')
-  @Roles('admin', 'directivo')
+  @Roles('admin', 'directivo', 'secretary')
+  @ModuleAccess('dashboard')
   async getStatsByLevel() {
     return this.reportsService.getStatsByLevel();
   }
 
   @Get('application/:id/pdf')
-  @Roles('admin', 'secretary', 'directivo', 'user')
+  @Roles('admin', 'secretary', 'directivo', 'user', 'apoderado')
+  @ModuleAccess('')
   async downloadApplicationPdf(
     @Param('id') id: string,
     @Res() res: Response,
@@ -42,18 +48,18 @@ export class ReportsController {
     // Fetch application directly from Prisma via service (we might need a method that doesn't check owner if admin)
     // For now, let's use findOne and handle permissions manually or reuse existing service methods
     // If user is admin/secretary/directivo, access is allowed. If 'user', must be owner.
-    
+
     let application;
     try {
-        const hasPrivilegedRole = userRoles.some(role => ['admin', 'secretary', 'directivo'].includes(role));
+      const hasPrivilegedRole = userRoles.some(role => ['admin', 'secretary', 'directivo'].includes(role));
 
-        if (hasPrivilegedRole) {
-             application = await this.applicationsService.findOne(id);
-        } else {
-             application = await this.applicationsService.findOne(id, userId);
-        }
+      if (hasPrivilegedRole) {
+        application = await this.applicationsService.findOne(id);
+      } else {
+        application = await this.applicationsService.findOne(id, userId);
+      }
     } catch (e) {
-        throw e;
+      throw e;
     }
 
     const buffer = await this.pdfService.generateApplicationPdf(application);

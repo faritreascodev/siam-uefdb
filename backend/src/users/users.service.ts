@@ -3,10 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcryptjs';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private auditService: AuditService
+  ) { }
 
   async findAllRoles() {
     return this.prisma.role.findMany();
@@ -15,7 +19,7 @@ export class UsersService {
   async findAll(role?: string) {
     // Basic filter setup
     const whereClause: any = {};
-    
+
     if (role) {
       whereClause.roles = {
         some: {
@@ -187,7 +191,7 @@ export class UsersService {
     }
 
     const data: any = { isActive };
-    
+
     // Sync status with isActive
     if (isActive) {
       data.status = 'ACTIVO';
@@ -299,11 +303,11 @@ export class UsersService {
     // 2. Assign 'apoderado' role automatically
     const apoderadoRole = await this.prisma.role.findUnique({ where: { name: 'apoderado' } });
     if (apoderadoRole) {
-       await this.prisma.userRole.upsert({
-         where: { userId_roleId: { userId: id, roleId: apoderadoRole.id } },
-         create: { userId: id, roleId: apoderadoRole.id },
-         update: {},
-       });
+      await this.prisma.userRole.upsert({
+        where: { userId_roleId: { userId: id, roleId: apoderadoRole.id } },
+        create: { userId: id, roleId: apoderadoRole.id },
+        update: {},
+      });
     }
 
     return updatedUser;
@@ -318,6 +322,68 @@ export class UsersService {
         rejectionNote: reason,
       },
     });
+  }
+
+  async bulkApprove(ids: string[], adminUser: any) {
+    const apoderadoRole = await this.prisma.role.findUnique({ where: { name: 'apoderado' } });
+
+    // We use a transaction to ensure all user roles are created
+    return this.prisma.$transaction(async (tx) => {
+      const results = await tx.user.updateMany({
+        where: { id: { in: ids }, status: 'PENDIENTE_APROBACION' },
+        data: {
+          status: 'ACTIVO',
+          isActive: true,
+          approvedAt: new Date(),
+        },
+      });
+
+      if (apoderadoRole) {
+        // Find users that actually were updated (to avoid assigning role to already active users if they were in the list)
+        // Since updateMany doesn't return the IDs, we assume we want to assign role to all IDs provided that were PENDING
+        for (const id of ids) {
+          await tx.userRole.upsert({
+            where: { userId_roleId: { userId: id, roleId: apoderadoRole.id } },
+            create: { userId: id, roleId: apoderadoRole.id },
+            update: {},
+          });
+
+          await this.auditService.create({
+            action: 'BULK_APPROVE_USER',
+            entity: 'User',
+            entityId: id,
+            userId: adminUser.id || adminUser.sub,
+            userEmail: adminUser.email,
+          });
+        }
+      }
+
+      return results;
+    });
+  }
+
+  async bulkReject(ids: string[], adminUser: any, reason?: string) {
+    const results = await this.prisma.user.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        status: 'RECHAZADO',
+        isActive: false,
+        rejectionNote: reason,
+      },
+    });
+
+    for (const id of ids) {
+      await this.auditService.create({
+        action: 'BULK_REJECT_USER',
+        entity: 'User',
+        entityId: id,
+        details: { reason },
+        userId: adminUser.id || adminUser.sub,
+        userEmail: adminUser.email,
+      });
+    }
+
+    return results;
   }
 
   // --- Password Recovery Admin Methods ---
@@ -335,7 +401,7 @@ export class UsersService {
       where: { id: requestId },
       include: { user: true },
     });
-    
+
     if (!request) throw new NotFoundException('Request not found');
 
     if (action === 'REJECT') {
@@ -348,7 +414,7 @@ export class UsersService {
 
     // APPROVE -> Generate Temp Password
     // Generate simple random password: 8 chars
-    const tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!'; 
+    const tempPassword = Math.random().toString(36).slice(-8) + 'Aa1!';
     const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
     // Update User
@@ -373,8 +439,8 @@ export class UsersService {
       data: { status: 'ATENDIDO', resolvedAt: new Date() },
     });
 
-    return { 
-      message: 'Temporary password generated', 
+    return {
+      message: 'Temporary password generated',
       tempPassword: tempPassword,
     };
   }
@@ -395,14 +461,14 @@ export class UsersService {
       data: {
         password: hashedPassword,
         mustChangePassword: true,
-        tempPassword: tempPassword, 
+        tempPassword: tempPassword,
         // Note: For security, in a real env, we usually don't store cleartext temp pass.
         // Keeping it for MVP simplicity as per request requirement "Funcionalidad de reset".
       },
     });
 
-    return { 
-      message: 'Password reset successfully', 
+    return {
+      message: 'Password reset successfully',
       tempPassword: tempPassword,
       instructions: 'Please communicate this new temporary password to the user securely.'
     };
