@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ModuleAccessGuard } from '../auth/guards/module-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ModuleAccess } from '../auth/decorators/module-access.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { QuotasService } from './quotas.service';
 import { CreateQuotaDto } from './dto/create-quota.dto';
@@ -10,9 +12,10 @@ import { UpdateQuotaDto } from './dto/update-quota.dto';
 @ApiTags('quotas')
 @ApiBearerAuth('JWT-auth')
 @Controller('quotas')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
+@ModuleAccess('cupos')
 export class QuotasController {
-  constructor(private readonly quotasService: QuotasService) {}
+  constructor(private readonly quotasService: QuotasService) { }
 
   @Post()
   @Roles('superadmin', 'admin')
@@ -31,18 +34,18 @@ export class QuotasController {
   @Get('seed')
   @Roles('superadmin', 'admin')
   @ApiOperation({ summary: 'Seed initial quota data' })
+  @ModuleAccess('') // override to allow seed for admin only, though it's already protected
   seed() {
     return this.quotasService.seed();
   }
 
   @Get('check-availability')
-  // Public or User accessible? Usually User when applying.
-  // We keep it protected but accessible to all roles or just basic user?
-  // Ideally authenticated.
+  @ModuleAccess('') // override so anyone can check
   checkAvailability(
     @Query('gradeLevel') gradeLevel: string,
     @Query('shift') shift: string,
     @Query('specialty') specialty?: string,
+    @Query('previousSchool') previousSchool?: string,
   ) {
     if (!gradeLevel || !shift) {
       return {
@@ -53,11 +56,11 @@ export class QuotasController {
     // Call service which returns Promise now
     return this.quotasService.checkAvailability(gradeLevel, shift, specialty)
       .then(availability => {
-         const requiresCursillo = this.quotasService.requiresCursillo(gradeLevel);
-         return {
-           ...availability,
-           requiresCursillo,
-         };
+        const requiresCursillo = this.quotasService.requiresCursillo(gradeLevel, previousSchool);
+        return {
+          ...availability,
+          requiresCursillo,
+        };
       });
   }
 

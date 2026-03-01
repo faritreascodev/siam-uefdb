@@ -14,24 +14,29 @@ import { ApplicationsService } from './applications.service';
 import { CreateApplicationDto, UpdateApplicationDto } from './dto/create-application.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { ModuleAccessGuard } from '../auth/guards/module-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { ModuleAccess } from '../auth/decorators/module-access.decorator';
 import { ApplicationStatus } from '@prisma/client';
 
 @Controller('applications')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
+@ModuleAccess('admisiones')
 export class ApplicationsController {
-  constructor(private readonly applicationsService: ApplicationsService) {}
+  constructor(private readonly applicationsService: ApplicationsService) { }
 
   // === ENDPOINTS PARA APODERADO ===
 
   // Crear nueva solicitud (borrador vacío)
   @Post()
+  @ModuleAccess('')
   create(@Request() req: any) {
     return this.applicationsService.create(req.user.id);
   }
 
   // Actualizar borrador (autoguardado)
   @Patch(':id')
+  @ModuleAccess('')
   update(
     @Param('id') id: string,
     @Body() updateApplicationDto: UpdateApplicationDto,
@@ -42,42 +47,61 @@ export class ApplicationsController {
 
   // Enviar solicitud
   @Post(':id/submit')
+  @ModuleAccess('')
   submit(@Param('id') id: string, @Request() req: any) {
     return this.applicationsService.submit(id, req.user.id);
   }
 
   // Listar mis solicitudes
   @Get('my-applications')
+  @ModuleAccess('')
   findMyApplications(@Request() req: any) {
     return this.applicationsService.findMyApplications(req.user.id);
   }
 
   // Obtener mis estadísticas
   @Get('my-stats')
+  @ModuleAccess('')
   getMyStats(@Request() req: any) {
     return this.applicationsService.getMyStats(req.user.id);
   }
 
   // Verificar disponibilidad de cupos
   @Get('check-quota')
+  @ModuleAccess('')
   checkQuota(
     @Query('gradeLevel') gradeLevel: string,
     @Query('shift') shift: string,
+    @Query('previousSchool') previousSchool?: string
   ) {
-    return this.applicationsService.checkQuota(gradeLevel, shift);
+    return this.applicationsService.checkQuota(gradeLevel, shift, previousSchool);
   }
 
 
   // Ver detalle de mi solicitud
   @Get(':id')
+  @ModuleAccess('')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.applicationsService.findOne(id, req.user.id);
   }
 
   // Eliminar mi solicitud (solo DRAFT)
   @Delete(':id')
+  @ModuleAccess('')
   remove(@Param('id') id: string, @Request() req: any) {
     return this.applicationsService.remove(id, req.user.id);
+  }
+
+  // Cargar detalles de pago
+  @Patch(':id/payment')
+  @ModuleAccess('')
+  uploadPaymentDetails(
+    @Param('id') id: string,
+    @Body('paymentDate') paymentDate: string,
+    @Body('paymentReference') paymentReference: string,
+    @Request() req: any,
+  ) {
+    return this.applicationsService.uploadPaymentDetails(id, req.user.id, paymentDate, paymentReference);
   }
 
   // === ENDPOINTS PARA ADMIN ===
@@ -166,6 +190,18 @@ export class ApplicationsController {
     return this.applicationsService.reject(id, rejectionReason);
   }
 
+  @Post('admin/bulk/approve')
+  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  bulkApprove(@Body('ids') ids: string[], @Request() req: any) {
+    return this.applicationsService.bulkApprove(ids, req.user);
+  }
+
+  @Post('admin/bulk/reject')
+  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  bulkReject(@Body('ids') ids: string[], @Body('reason') reason: string, @Request() req: any) {
+    return this.applicationsService.bulkReject(ids, reason, req.user);
+  }
+
   // Asignar a directivo
   @Post('admin/:id/assign')
   @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
@@ -224,12 +260,14 @@ export class ApplicationsController {
 
   @Get('admin/:id/available-parallels')
   @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @ModuleAccess('matriculacion')
   getAvailableParallels(@Param('id') id: string) {
     return this.applicationsService.getAvailableParallels(id);
   }
 
   @Post('admin/:id/assign-parallel')
   @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @ModuleAccess('matriculacion')
   assignParallel(
     @Param('id') id: string,
     @Body('parallel') parallel: string,
@@ -238,10 +276,24 @@ export class ApplicationsController {
     return this.applicationsService.assignParallel(id, parallel, req.user.id);
   }
 
+  // === PAGOS ===
+
+  @Post('admin/:id/validate-payment')
+  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  validatePayment(
+    @Param('id') id: string,
+    @Body('isValid') isValid: boolean,
+    @Body('reason') reason?: string,
+    @Request() req?: any,
+  ) {
+    return this.applicationsService.validatePayment(id, isValid, reason, req?.user?.id);
+  }
+
   // === GESTIÓN DE CURSILLOS ===
-  
+
   @Post('admin/:id/cursillo-schedule')
   @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @ModuleAccess('cursillos')
   scheduleCursillo(
     @Param('id') id: string,
     @Body('cursilloDate') cursilloDate: string,
@@ -251,6 +303,7 @@ export class ApplicationsController {
 
   @Post('admin/:id/cursillo-result')
   @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @ModuleAccess('cursillos')
   recordCursilloResult(
     @Param('id') id: string,
     @Body('result') result: 'APPROVED' | 'REJECTED',

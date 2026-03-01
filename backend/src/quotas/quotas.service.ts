@@ -1,18 +1,22 @@
 import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SystemConfigService } from '../system-config/system-config.service';
 import { CreateQuotaDto } from './dto/create-quota.dto';
 import { UpdateQuotaDto } from './dto/update-quota.dto';
 
 @Injectable()
 export class QuotasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: SystemConfigService
+  ) { }
 
   async create(createQuotaDto: CreateQuotaDto) {
     try {
       return await this.prisma.admissionQuota.create({
         data: {
           ...createQuotaDto,
-          academicYear: createQuotaDto.academicYear || "2026-2027",
+          academicYear: createQuotaDto.academicYear || await this.configService.get('CURRENT_ACADEMIC_YEAR') || "2026-2027",
           createdBy: "ADMIN",
         },
       });
@@ -37,35 +41,35 @@ export class QuotasService {
     // We count both APPROVED and CURSILLO_APPROVED as "occupying" a spot
     const applications = await this.prisma.application.findMany({
       where: {
-        status: { in: ['APPROVED', 'CURSILLO_APPROVED'] }, 
+        status: { in: ['APPROVED', 'CURSILLO_APPROVED'] },
       },
       select: {
         gradeLevel: true,
         shift: true,
-         specialty: true,
-         // @ts-ignore
-         assignedParallel: true,
-       }
-     });
- 
-     return quotas.map(q => {
-       const occupied = applications.filter(app => {
-          // Match Level (Exact match expected)
-          if (app.gradeLevel !== q.level) return false;
-          
-          // Match Shift (Enum to String mapping)
-          const appShiftStr = app.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
-          if (appShiftStr !== q.shift) return false;
- 
-          // Match Specialty (Handle nulls)
-          if ((app.specialty || null) !== (q.specialty || null)) return false;
- 
-          // Match Parallel (Strict match)
-          // If app has no assigned parallel, it doesn't count towards a specific parallel quota
-          // @ts-ignore
-          if (app.assignedParallel !== q.parallel) return false;
- 
-          return true;
+        specialty: true,
+        // @ts-ignore
+        assignedParallel: true,
+      }
+    });
+
+    return quotas.map(q => {
+      const occupied = applications.filter(app => {
+        // Match Level (Exact match expected)
+        if (app.gradeLevel !== q.level) return false;
+
+        // Match Shift (Enum to String mapping)
+        const appShiftStr = app.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
+        if (appShiftStr !== q.shift) return false;
+
+        // Match Specialty (Handle nulls)
+        if ((app.specialty || null) !== (q.specialty || null)) return false;
+
+        // Match Parallel (Strict match)
+        // If app has no assigned parallel, it doesn't count towards a specific parallel quota
+        // @ts-ignore
+        if (app.assignedParallel !== q.parallel) return false;
+
+        return true;
       }).length;
 
       return {
@@ -105,11 +109,11 @@ export class QuotasService {
       // Inicial - Matutina
       { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 30 },
       { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 35 },
-      
+
       // Inicial - Vespertina
       { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
       { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
-      
+
       // EGB Elemental & Media (1ero a 7mo) - Vespertina
       ...["1ero EGB", "2do EGB", "3ro EGB", "4to EGB", "5to EGB", "6to EGB", "7mo EGB"].flatMap(level => [
         { level, parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
@@ -140,7 +144,7 @@ export class QuotasService {
     ];
 
     let createdCount = 0;
-    
+
     for (const quota of quotasSeed) {
       const existing = await this.prisma.admissionQuota.findFirst({
         where: {
@@ -171,21 +175,21 @@ export class QuotasService {
    * Check availability based on DB configuration
    */
   async checkAvailability(gradeLevel: string, shift: string, specialty?: string) {
-    // Determine academic year (hardcoded for now as per req, or env)
-    const academicYear = "2026-2027";
+    // Determine academic year from config
+    const academicYear = await this.configService.get('CURRENT_ACADEMIC_YEAR') || "2026-2027";
 
     // 1. Find all quotas matching criteria
     const quotas = await this.prisma.admissionQuota.findMany({
       where: {
-        level: gradeLevel, 
-        shift: { equals: shift, mode: 'insensitive' }, 
+        level: gradeLevel,
+        shift: { equals: shift, mode: 'insensitive' },
         specialty: specialty || null,
         academicYear
       }
     });
 
     if (quotas.length === 0) {
-       return { available: false, totalQuotas: 0, usedQuotas: 0, remainingQuotas: 0 };
+      return { available: false, totalQuotas: 0, usedQuotas: 0, remainingQuotas: 0 };
     }
 
     const totalQuotas = quotas.reduce((sum, q) => sum + q.totalQuota, 0);
@@ -215,12 +219,24 @@ export class QuotasService {
       remainingQuotas: totalQuotas - usedQuotas,
     };
   }
-  
+
   /**
    * Verificar si un grado requiere cursillo
    */
-  requiresCursillo(gradeLevel: string): boolean {
+  requiresCursillo(gradeLevel: string, previousSchool?: string): boolean {
     const grade = gradeLevel.toUpperCase();
-    return grade.includes('8VO') || grade.includes('1RO BGU') || grade.includes('1ERO BGU');
+    const isSpecialGrade = grade.includes('8VO') || grade.includes('1RO BGU') || grade.includes('1ERO BGU');
+
+    if (!isSpecialGrade) return false;
+
+    if (previousSchool) {
+      const school = previousSchool.toUpperCase();
+      // Si viene de una institución relacionada a UEFDB, no requiere cursillo
+      if (school.includes('UEFDB') || school.includes('DON BOSCO') || school.includes('FISCOMISIONAL')) {
+        return false;
+      }
+    }
+
+    return true; // Es de otra institución y es el grado especial
   }
 }

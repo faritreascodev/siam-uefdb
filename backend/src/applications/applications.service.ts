@@ -3,13 +3,15 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto, UpdateApplicationDto } from './dto/create-application.dto';
 import { ApplicationStatus, Shift } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class ApplicationsService {
   constructor(
     private prisma: PrismaService,
-    private notificationsService: NotificationsService
-  ) {}
+    private notificationsService: NotificationsService,
+    private auditService: AuditService
+  ) { }
 
   // Crear nueva solicitud (borrador)
   async create(userId: string) {
@@ -34,18 +36,33 @@ export class ApplicationsService {
     }
 
     try {
+      const { extraContacts, ...restDto } = dto;
+
       return await this.prisma.application.update({
         where: { id },
         data: {
-          ...dto,
-          studentBirthDate: dto.studentBirthDate ? new Date(dto.studentBirthDate) : undefined,
-          studentBirthPlace: dto.studentBirthPlace ? JSON.parse(JSON.stringify(dto.studentBirthPlace)) : undefined,
-          fatherData: dto.fatherData ? JSON.parse(JSON.stringify(dto.fatherData)) : undefined,
-          motherData: dto.motherData ? JSON.parse(JSON.stringify(dto.motherData)) : undefined,
-          representativeData: dto.representativeData ? JSON.parse(JSON.stringify(dto.representativeData)) : undefined,
+          ...restDto,
+          studentBirthDate: restDto.studentBirthDate ? new Date(restDto.studentBirthDate) : undefined,
+          studentBirthPlace: restDto.studentBirthPlace ? JSON.parse(JSON.stringify(restDto.studentBirthPlace)) : undefined,
+          fatherData: restDto.fatherData ? JSON.parse(JSON.stringify(restDto.fatherData)) : undefined,
+          motherData: restDto.motherData ? JSON.parse(JSON.stringify(restDto.motherData)) : undefined,
+          representativeData: restDto.representativeData ? JSON.parse(JSON.stringify(restDto.representativeData)) : undefined,
+          acceptedAt: restDto.acceptedIdeario ? new Date() : undefined,
+          extraContacts: extraContacts ? {
+            deleteMany: {},
+            create: extraContacts.map(ec => ({
+              cedula: ec.cedula || '',
+              firstName: ec.firstName,
+              lastName: ec.lastName,
+              email: ec.email,
+              phone: ec.phone,
+              relationship: ec.relationship,
+            }))
+          } : undefined,
         },
         include: {
           documents: true,
+          extraContacts: true,
         },
       });
     } catch (error) {
@@ -89,6 +106,30 @@ export class ApplicationsService {
       'APPLICATION_SUBMITTED'
     );
 
+    // Notify Admins and Secretaries
+    await this.notificationsService.notifyRole('admin', {
+      type: 'APPLICATION_SUBMITTED',
+      message: `Nueva solicitud recibida: ${application.studentFirstName} ${application.studentLastName}`,
+      applicationId: id,
+      priority: 'HIGH'
+    });
+
+    await this.notificationsService.notifyRole('secretary', {
+      type: 'APPLICATION_SUBMITTED',
+      message: `Nueva solicitud recibida: ${application.studentFirstName} ${application.studentLastName}`,
+      applicationId: id,
+      priority: 'NORMAL'
+    });
+
+    // Audit Log
+    await this.auditService.create({
+      action: 'SUBMIT_APPLICATION',
+      entity: 'Application',
+      entityId: id,
+      userId,
+      details: { student: `${application.studentFirstName} ${application.studentLastName}` }
+    });
+
     return updatedApp;
   }
 
@@ -98,6 +139,7 @@ export class ApplicationsService {
       where: { userId },
       include: {
         documents: true,
+        extraContacts: true,
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -126,6 +168,7 @@ export class ApplicationsService {
       where: { id },
       include: {
         documents: true,
+        extraContacts: true,
         user: {
           select: {
             id: true,
@@ -162,6 +205,154 @@ export class ApplicationsService {
     });
   }
 
+  async bulkApprove(ids: string[], user: any) {
+    const results = await this.prisma.application.updateMany({
+      where: {
+        id: { in: ids },
+        status: { in: ['SUBMITTED', 'UNDER_REVIEW', 'CURSILLO_APPROVED'] }
+      },
+      data: {
+        status: 'APPROVED',
+        acceptedAt: new Date(),
+        adminNotes: 'Aprobación masiva del sistema'
+      }
+    });
+
+    // Notify users
+    const apps = await this.prisma.application.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, userId: true, studentFirstName: true, studentLastName: true }
+    });
+
+    for (const app of apps) {
+      await this.notificationsService.createForApplicationStatus(
+        app.userId,
+        app.id,
+        `${app.studentFirstName} ${app.studentLastName}`,
+        'APPLICATION_APPROVED'
+      );
+
+      await this.auditService.create({
+        action: 'APPROVE_APPLICATION',
+        entity: 'Application',
+        entityId: app.id,
+        details: { mode: 'bulk' },
+        userId: user.id || user.sub,
+        userEmail: user.email,
+      });
+    }
+
+    return results;
+  }
+
+  async bulkReject(ids: string[], reason: string, user: any) {
+    const results = await this.prisma.application.updateMany({
+      where: { id: { in: ids } },
+      data: {
+        status: 'REJECTED',
+        rejectionReason: reason
+      }
+    });
+
+    // Notify users
+    const apps = await this.prisma.application.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, userId: true, studentFirstName: true, studentLastName: true }
+    });
+
+    for (const app of apps) {
+      await this.notificationsService.createForApplicationStatus(
+        app.userId,
+        app.id,
+        `${app.studentFirstName} ${app.studentLastName}`,
+        'APPLICATION_REJECTED',
+        reason
+      );
+
+      await this.auditService.create({
+        action: 'REJECT_APPLICATION',
+        entity: 'Application',
+        entityId: app.id,
+        details: { mode: 'bulk', reason },
+        userId: user.id || user.sub,
+        userEmail: user.email,
+      });
+    }
+
+    return results;
+  }
+
+  // === PAGOS DE MATRÍCULA ===
+
+  async uploadPaymentDetails(id: string, userId: string, paymentDate: string, paymentReference?: string) {
+    const application = await this.prisma.application.findUnique({ where: { id } });
+
+    if (!application) throw new NotFoundException('Solicitud no encontrada');
+    if (application.userId !== userId) throw new ForbiddenException('No tienes permiso para actualizar esta solicitud');
+    if (!['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED'].includes(application.status)) {
+      throw new BadRequestException('Para subir el comprobante, la solicitud debe estar Aprobada (o con Cursillo Aprobado).');
+    }
+
+    const updatedApp = await this.prisma.application.update({
+      where: { id },
+      data: {
+        status: 'PAYMENT_UPLOADED',
+        paymentDate: new Date(paymentDate),
+        paymentReference,
+        updatedAt: new Date(),
+      },
+      include: { documents: true },
+    });
+
+    // Notify the apoderado
+    const studentName = `${updatedApp.studentFirstName || ''} ${updatedApp.studentLastName || ''}`.trim();
+    await this.notificationsService.notifyPaymentUploaded(userId, id, studentName);
+
+    // Notify admin staff (secretaries, admins)
+    await this.notificationsService.notifyAdminStaffPaymentUploaded(id, studentName);
+
+    await this.auditService.create({
+      action: 'PAYMENT_UPLOADED',
+      entity: 'Application',
+      entityId: id,
+      userId,
+      details: { paymentDate, paymentReference }
+    });
+
+    return updatedApp;
+  }
+
+  async validatePayment(id: string, isValid: boolean, reason?: string, userId?: string) {
+    const application = await this.prisma.application.findUnique({ where: { id } });
+
+    if (!application) throw new NotFoundException('Solicitud no encontrada');
+    if (application.status !== 'PAYMENT_UPLOADED') throw new BadRequestException('No hay un pago pendiente de validación');
+
+    if (isValid) {
+      const updatedApp = await this.prisma.application.update({
+        where: { id },
+        data: { status: 'PAYMENT_VALIDATED', processedById: userId, processedAt: new Date() },
+        include: { documents: true },
+      });
+
+      const studentName = `${updatedApp.studentFirstName || ''} ${updatedApp.studentLastName || ''}`.trim();
+      await this.notificationsService.notifyPaymentValidated(updatedApp.userId, id, studentName);
+
+      return updatedApp;
+    } else {
+      const updatedApp = await this.prisma.application.update({
+        where: { id },
+        data: { status: 'APPROVED', processedById: userId, processedAt: new Date() },
+        include: { documents: true },
+      });
+
+      const studentName = `${updatedApp.studentFirstName || ''} ${updatedApp.studentLastName || ''}`.trim();
+      await this.notificationsService.notifyPaymentRejected(updatedApp.userId, id, studentName, reason);
+
+      return updatedApp;
+    }
+  }
+
   // === MÉTODOS PARA ADMIN ===
 
   // Estadísticas globales
@@ -190,7 +381,7 @@ export class ApplicationsService {
     page?: number;
     limit?: number;
     search?: string;
-  startDate?: string;
+    startDate?: string;
     endDate?: string;
     specialty?: string;
     shift?: Shift;
@@ -198,16 +389,16 @@ export class ApplicationsService {
     processedById?: string;
     assignedParallel?: string;
   }) {
-    const { 
-      status, gradeLevel, page = 1, limit = 20, 
+    const {
+      status, gradeLevel, page = 1, limit = 20,
       search, startDate, endDate, specialty, shift, assignedToId, processedById,
       assignedParallel
     } = options || {};
-    
+
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    
+
     // Status Filter
     if (status) {
       where.status = status;
@@ -333,6 +524,14 @@ export class ApplicationsService {
       correctionRequest
     );
 
+    // Audit Log
+    await this.auditService.create({
+      action: 'REQUEST_CORRECTION',
+      entity: 'Application',
+      entityId: id,
+      details: { correctionRequest }
+    });
+
     return updatedApp;
   }
 
@@ -344,6 +543,15 @@ export class ApplicationsService {
         status: 'APPROVED',
         adminNotes,
       },
+    });
+
+    // Audit Log
+    await this.auditService.create({
+      action: 'APPROVE_APPLICATION',
+      entity: 'Application',
+      entityId: id,
+      userId: adminNotes?.includes('SYSTEM') ? 'SYSTEM' : undefined, // We'll improve this with req.user later
+      details: { adminNotes }
     });
 
     // Notify User
@@ -375,6 +583,14 @@ export class ApplicationsService {
       'APPLICATION_REJECTED',
       rejectionReason
     );
+
+    // Audit Log
+    await this.auditService.create({
+      action: 'REJECT_APPLICATION',
+      entity: 'Application',
+      entityId: id,
+      details: { rejectionReason }
+    });
 
     return updatedApp;
   }
@@ -443,7 +659,7 @@ export class ApplicationsService {
     }
   ) {
     const { status, gradeLevel, search, startDate, endDate, specialty, shift } = options || {};
-    
+
     const where: any = { assignedToId: userId };
 
     if (status) where.status = status;
@@ -495,10 +711,10 @@ export class ApplicationsService {
     });
   }
 
-  // Verificar disponibilidad de cupos
-  async checkQuota(gradeLevel: string, shift: string) {
+  // Verificar disponibilidad de cupos (general)
+  async checkQuota(gradeLevel: string, shift: string, previousSchool?: string) {
     if (!gradeLevel || !shift) {
-      return { status: 'AVAILABLE', available: 0, total: 0, used: 0 };
+      return { status: 'AVAILABLE', available: 0, total: 0, used: 0, requiresCursillo: false };
     }
 
     const mapLevel = (level: string) => {
@@ -553,17 +769,31 @@ export class ApplicationsService {
     });
 
     const available = Math.max(0, totalQuota - approvedCount);
-    
+
     let status = 'AVAILABLE';
     if (totalQuota === 0) status = 'FULL';
     else if (available === 0) status = 'FULL';
     else if (available <= 5) status = 'LIMITED';
 
+    const reqCursillo = (() => {
+      const grade = gradeLevel.toUpperCase();
+      const isSpecialGrade = grade.includes('8VO') || grade.includes('1RO BGU') || grade.includes('1ERO BGU');
+      if (!isSpecialGrade) return false;
+      if (previousSchool) {
+        const school = previousSchool.toUpperCase();
+        if (school.includes('UEFDB') || school.includes('DON BOSCO') || school.includes('FISCOMISIONAL')) {
+          return false;
+        }
+      }
+      return true;
+    })();
+
     return {
       status, // AVAILABLE, LIMITED, FULL
       available,
       total: totalQuota,
-      used: approvedCount
+      used: approvedCount,
+      requiresCursillo: reqCursillo
     };
   }
 
@@ -579,7 +809,7 @@ export class ApplicationsService {
     // 1. Obtener configuración de cupos (AdmissionQuota) para este nivel/jornada
     // Si no existe configuración específica, asumimos paralelos por defecto "A", "B", "C"
     // O buscamos qué paralelos tienen cupos definidos.
-    
+
     // Por simplicidad para el MVP:
     // Buscamos todas las Quotas definidas para este Nivel + Jornada (+ Especialidad si aplica)
     const quotas = await this.prisma.admissionQuota.findMany({
@@ -652,10 +882,9 @@ export class ApplicationsService {
 
     if (!application) throw new NotFoundException('Solicitud no encontrada');
 
-    // Validar estado habilitado para asignación
-    // Aceptamos APPROVED o PAYMENT_VALIDATED
-    if (!['APPROVED', 'PAYMENT_VALIDATED'].includes(application.status)) {
-       throw new BadRequestException('La solicitud debe estar APROBADA o con PAGO VALIDADO para asignar paralelo.');
+    // Validar estado habilitado para asignación (solo si el pago ya fue validado)
+    if (application.status !== 'PAYMENT_VALIDATED') {
+      throw new BadRequestException('Para matricular y asignar paralelo DEBE obligatoriamente tener el comprobante de pago validado (estado PAYMENT_VALIDATED).');
     }
 
     // Verificar cupo disponible en el paralelo seleccionado
@@ -715,11 +944,20 @@ export class ApplicationsService {
       assignmentDetails
     );
 
+    // Audit Log
+    await this.auditService.create({
+      action: 'ASSIGN_PARALLEL_MATRICULATE',
+      entity: 'Application',
+      entityId: id,
+      userId,
+      details: { parallel, student: `${updated.studentFirstName} ${updated.studentLastName}` }
+    });
+
     return updated;
   }
 
   // === CURSILLOS ===
-  
+
   // Programar cursillo
   async scheduleCursillo(id: string, cursilloDate: string) {
     const updatedApp = await this.prisma.application.update({
@@ -816,7 +1054,7 @@ export class ApplicationsService {
   private async findOneOrFail(id: string, userId: string) {
     const application = await this.prisma.application.findUnique({
       where: { id },
-      include: { documents: true },
+      include: { documents: true, extraContacts: true },
     });
 
     if (!application) {
@@ -845,7 +1083,7 @@ export class ApplicationsService {
 
     const missingFields = requiredFields.filter(field => !application[field]);
 
-    const isBGU = ['1ero BGU', '2do BGU', '3ro BGU'].includes(application.gradeLevel || '');
+    const isBGU = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(application.gradeLevel || '');
     if (isBGU && !application.specialty) {
       missingFields.push('specialty');
     }

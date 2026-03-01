@@ -1,14 +1,15 @@
-import { 
-  IsString, 
-  IsOptional, 
-  IsEnum, 
-  IsBoolean, 
+import {
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
   IsDateString,
   IsNumber,
   Min,
   Max,
   ValidateNested,
-  IsObject
+  IsObject,
+  IsNotEmpty
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Gender, Shift } from '@prisma/client';
@@ -84,6 +85,32 @@ export class RepresentativeDataDto extends ParentDataDto {
   @IsString()
   @IsOptional()
   legalGuardianDocument?: string; // Documento de tutela si no es padre/madre
+}
+
+export class ExtraContactDto {
+  @IsString()
+  @IsOptional()
+  cedula?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
+
+  @IsString()
+  @IsOptional()
+  email?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsString()
+  @IsNotEmpty()
+  relationship: string;
 }
 
 // DTO principal para crear/actualizar solicitud
@@ -202,11 +229,27 @@ export class CreateApplicationDto {
   @IsOptional()
   representativeData?: RepresentativeDataDto;
 
+  @ValidateNested({ each: true })
+  @Type(() => ExtraContactDto)
+  @IsOptional()
+  extraContacts?: ExtraContactDto[];
+
   // Ideario UEFDB
   @IsBoolean()
   @IsOptional()
   acceptedIdeario?: boolean;
+
+  // Campos de pago (manejados por endpoint propio, permitidos aquí para evitar forbidNonWhitelisted)
+  @IsOptional()
+  paymentDate?: string;
+
+  @IsOptional()
+  paymentReference?: string;
+
+  @IsOptional()
+  @IsNumber()
+  paymentAmount?: number;
 }
 
 // DTO para actualizar (usa PartialType en el controlador)
-export class UpdateApplicationDto extends CreateApplicationDto {}
+export class UpdateApplicationDto extends CreateApplicationDto { }
