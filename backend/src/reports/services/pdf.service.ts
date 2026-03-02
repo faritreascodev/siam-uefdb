@@ -11,7 +11,7 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     this.browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     });
   }
 
@@ -30,165 +30,297 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: {
-        top: '20px',
-        right: '20px',
-        bottom: '20px',
-        left: '20px',
-      },
+      margin: { top: '15mm', right: '15mm', bottom: '15mm', left: '15mm' },
     });
 
     await page.close();
     return Buffer.from(pdfBuffer);
   }
 
+  private gradeLevelLabel(g: string): string {
+    const map: Record<string, string> = {
+      // Formato nuevo (canónico)
+      'Inicial 1': 'Inicial 1 (3 años)',
+      'Inicial 2': 'Inicial 2 (4 años)',
+      '1ero EGB': '1ro Básico',
+      '2do EGB': '2do Básico',
+      '3ro EGB': '3ro Básico',
+      '4to EGB': '4to Básico',
+      '5to EGB': '5to Básico',
+      '6to EGB': '6to Básico',
+      '7mo EGB': '7mo Básico',
+      '8vo EGB': '8vo Básico',
+      '9no EGB': '9no Básico',
+      '10mo EGB': '10mo Básico',
+      '1ero BGU': '1ro Bachillerato',
+      '2do BGU': '2do Bachillerato',
+      '3ro BGU': '3ro Bachillerato',
+      // Formato legado (retrocompatibilidad)
+      'inicial_1': 'Inicial 1',
+      'inicial_2': 'Inicial 2',
+      '1ro_basico': '1ro Básico',
+      '2do_basico': '2do Básico',
+      '3ro_basico': '3ro Básico',
+      '4to_basico': '4to Básico',
+      '5to_basico': '5to Básico',
+      '6to_basico': '6to Básico',
+      '7mo_basico': '7mo Básico',
+      '8vo_basico': '8vo Básico',
+      '9no_basico': '9no Básico',
+      '10mo_basico': '10mo Básico',
+      '1ro_bachillerato': '1ro Bachillerato',
+      '2do_bachillerato': '2do Bachillerato',
+      '3ro_bachillerato': '3ro Bachillerato',
+    };
+    return map[g] || g || '—';
+  }
+
+  private specialtyLabel(s: string | null): string {
+    if (!s) return 'N/A';
+    const map: Record<string, string> = {
+      // Formato nuevo
+      'Ciencias': 'BGU Ciencias',
+      'Técnico Informática': 'BGU Técnico en Informática',
+      // Formato legado
+      'CIENCIAS': 'BGU Ciencias',
+      'TECNICO_INFORMATICA': 'BGU Técnico en Informática',
+    };
+    return map[s] || s;
+  }
+
+  private statusLabel(s: string): string {
+    const map: Record<string, string> = {
+      DRAFT: 'Borrador',
+      SUBMITTED: 'Enviada',
+      UNDER_REVIEW: 'En Revisión',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      REQUIRES_CORRECTION: 'Requiere Corrección',
+      MATRICULATED: 'Matriculada',
+      CURSILLO_SCHEDULED: 'Cursillo Programado',
+      CURSILLO_APPROVED: 'Cursillo Aprobado',
+      CURSILLO_REJECTED: 'Cursillo Reprobado',
+      PAYMENT_UPLOADED: 'Pago Cargado',
+      PAYMENT_VALIDATED: 'Pago Validado',
+    };
+    return map[s] || s;
+  }
+
+  private statusColor(s: string): string {
+    const colors: Record<string, string> = {
+      MATRICULATED: '#166534',
+      APPROVED: '#1e40af',
+      CURSILLO_APPROVED: '#1e40af',
+      REJECTED: '#991b1b',
+      CURSILLO_REJECTED: '#991b1b',
+      UNDER_REVIEW: '#92400e',
+    };
+    return colors[s] || '#374151';
+  }
+
+  private statusBg(s: string): string {
+    const bgs: Record<string, string> = {
+      MATRICULATED: '#dcfce7',
+      APPROVED: '#dbeafe',
+      CURSILLO_APPROVED: '#dbeafe',
+      REJECTED: '#fee2e2',
+      CURSILLO_REJECTED: '#fee2e2',
+      UNDER_REVIEW: '#fef3c7',
+    };
+    return bgs[s] || '#f3f4f6';
+  }
+
+  private formatDate(d: string | Date | null, locale = 'es-EC'): string {
+    if (!d) return '—';
+    try {
+      return new Date(d).toLocaleDateString(locale, {
+        day: '2-digit', month: 'long', year: 'numeric',
+      });
+    } catch {
+      return String(d);
+    }
+  }
+
+  private getLogoBase64(): string {
+    const paths = [
+      path.join(__dirname, '..', 'assets', 'logo-uefdb.png'),
+      path.join(process.cwd(), 'src', 'reports', 'assets', 'logo-uefdb.png'),
+      path.join(process.cwd(), 'dist', 'reports', 'assets', 'logo-uefdb.png'),
+    ];
+    for (const p of paths) {
+      try {
+        if (fs.existsSync(p)) {
+          return `data:image/png;base64,${fs.readFileSync(p).toString('base64')}`;
+        }
+      } catch { /* skip */ }
+    }
+    return '';
+  }
+
   private getHtmlTemplate(app: any): string {
-    // Helpers de traducción
-    const shiftLabel = (s: string) => s === 'MORNING' ? 'Matutina' : s === 'AFTERNOON' ? 'Vespertina' : s || '-';
-    const genderLabel = (g: string) => g === 'M' ? 'Masculino' : g === 'F' ? 'Femenino' : g || '-';
-    const specialtyLabel = (s: string) => s === 'CIENCIAS' ? 'BGU Ciencias' : s === 'TECNICO_INFORMATICA' ? 'BGU Técnico Informática' : s || 'N/A';
-    const statusLabel = (s: string) => ({
-      DRAFT: 'Borrador', SUBMITTED: 'Enviada', UNDER_REVIEW: 'En Revisión', APPROVED: 'Aprobada',
-      REJECTED: 'Rechazada', REQUIRES_CORRECTION: 'Requiere Corrección', MATRICULATED: 'Matriculada',
-      CURSILLO_SCHEDULED: 'Cursillo Programado', CURSILLO_APPROVED: 'Cursillo Aprobado',
-      PAYMENT_UPLOADED: 'Pago Cargado', PAYMENT_VALIDATED: 'Pago Validado',
-    })[s] || s;
-    const gradeLevelLabel = (g: string) => ({
-      'inicial_1': 'Inicial 1', 'inicial_2': 'Inicial 2',
-      '1ro_basico': '1ro Básico', '2do_basico': '2do Básico', '3ro_basico': '3ro Básico',
-      '4to_basico': '4to Básico', '5to_basico': '5to Básico', '6to_basico': '6to Básico',
-      '7mo_basico': '7mo Básico', '8vo_basico': '8vo Básico', '9no_basico': '9no Básico',
-      '10mo_basico': '10mo Básico', '1ro_bachillerato': '1ro Bachillerato',
-      '2do_bachillerato': '2do Bachillerato', '3ro_bachillerato': '3ro Bachillerato',
-    })[g] || g || '-';
+    const shiftLabel = (s: string) => s === 'MORNING' ? 'Matutina' : s === 'AFTERNOON' ? 'Vespertina' : s || '—';
+    const genderLabel = (g: string) => g === 'M' ? 'Masculino' : g === 'F' ? 'Femenino' : g === 'OTHER' ? 'Otro' : g || '—';
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.5; font-size: 12px; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 10px; }
-          .header h1 { color: #2563eb; margin: 0; font-size: 24px; }
-          .header p { margin: 5px 0; color: #666; }
-          .section { margin-bottom: 20px; }
-          .section-title { background-color: #f3f4f6; padding: 5px 10px; font-weight: bold; border-left: 4px solid #2563eb; margin-bottom: 10px; }
-          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-          .field { margin-bottom: 5px; }
-          .label { font-weight: bold; color: #555; display: block; font-size: 11px; }
-          .value { display: block; border-bottom: 1px solid #eee; padding-bottom: 2px; }
-          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; border-top: 1px solid #eee; padding-top: 10px; }
-          .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-          .status-APPROVED { background-color: #dcfce7; color: #166534; }
-          .status-SUBMITTED { background-color: #dbeafe; color: #1e40af; }
-          .status-REJECTED { background-color: #fee2e2; color: #991b1b; }
-          .tag { background: #eee; padding: 2px 5px; border-radius: 3px; font-size: 10px; margin-right: 5px; }
-        </style>
-      </head>
-      <body>
-        <div class="header" style="position: relative;">
-          ${(() => {
-        try {
-          // Intenta cargar el logo local
-          const logoPath = path.join(__dirname, '..', 'assets', 'logo-uefdb.png');
-          if (fs.existsSync(logoPath)) {
-            const logoBuffer = fs.readFileSync(logoPath);
-            const base64Logo = logoBuffer.toString('base64');
-            return `<img src="data:image/png;base64,${base64Logo}" style="position: absolute; left: 0; top: 0; height: 60px;" />`;
-          } else {
-            // Fallback for when running directly from src without Nest CLI assets setup yet
-            const fallbackPath = path.join(process.cwd(), 'src', 'reports', 'assets', 'logo-uefdb.png');
-            if (fs.existsSync(fallbackPath)) {
-              const logoBuffer = fs.readFileSync(fallbackPath);
-              const base64Logo = logoBuffer.toString('base64');
-              return `<img src="data:image/png;base64,${base64Logo}" style="position: absolute; left: 0; top: 0; height: 60px;" />`;
-            }
-          }
-        } catch (e) {
-          console.error("No se pudo cargar el logo", e);
-        }
-        return '';
-      })()}
-          
-          <h1>Ficha de Admisión</h1>
-          <p>Unidad Educativa Fiscomisional Don Bosco</p>
-          <p>Periodo Lectivo 2026 - 2027</p>
-          <div style="margin-top: 10px;">
-            <span class="status-badge">${statusLabel(app.status)}</span>
-          </div>
+    const logoSrc = this.getLogoBase64();
+    const logoTag = logoSrc
+      ? `<img src="${logoSrc}" style="height:56px; object-fit:contain;" alt="Logo UEFDB" />`
+      : `<div style="width:56px;height:56px;background:#1e40af;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:10px;">UEFDB</div>`;
 
-          ${(() => {
-        const photoDoc = app.documents?.find((d: any) => d.documentType === 'STUDENT_PHOTO');
-        if (photoDoc) {
-          // Ensure we use the correct backend URL for the image
-          const photoUrl = photoDoc.fileUrl.startsWith('http') ? photoDoc.fileUrl : `http://localhost:${process.env.PORT || 4000}${photoDoc.fileUrl}`;
-          return `<img src="${photoUrl}" style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px;" />`;
-        }
-        return '<div style="position: absolute; right: 0; top: 0; width: 80px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px;">FOTO</div>';
-      })()}
-        </div>
+    const photoDoc = app.documents?.find((d: any) => d.documentType === 'STUDENT_PHOTO');
+    const photoSrc = photoDoc
+      ? (photoDoc.fileUrl.startsWith('http')
+        ? photoDoc.fileUrl
+        : `http://localhost:${process.env.PORT || 4000}${photoDoc.fileUrl}`)
+      : null;
+    const photoTag = photoSrc
+      ? `<img src="${photoSrc}" style="width:90px;height:110px;object-fit:cover;border:2px solid #e5e7eb;border-radius:4px;" />`
+      : `<div style="width:90px;height:110px;border:2px dashed #d1d5db;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:10px;text-align:center;">FOTO<br>ESTUDIANTE</div>`;
 
-        <div class="section">
-          <div class="section-title">Información del Estudiante</div>
-          <div class="grid">
-            <div class="field"><span class="label">Nombres:</span> <span class="value">${app.studentFirstName || '-'}</span></div>
-            <div class="field"><span class="label">Apellidos:</span> <span class="value">${app.studentLastName || '-'}</span></div>
-            <div class="field"><span class="label">Cédula:</span> <span class="value">${app.studentCedula || '-'}</span></div>
-            <div class="field"><span class="label">Fecha Nacimiento:</span> <span class="value">${app.studentBirthDate ? new Date(app.studentBirthDate).toLocaleDateString() : '-'}</span></div>
-            <div class="field"><span class="label">Género:</span> <span class="value">${genderLabel(app.studentGender)}</span></div>
-            <div class="field"><span class="label">Dirección:</span> <span class="value">${app.studentAddress || '-'}</span></div>
-          </div>
-        </div>
+    const row = (label: string, value: string) =>
+      `<tr><td style="padding:5px 8px;color:#6b7280;font-size:11px;width:40%;vertical-align:top;">${label}</td><td style="padding:5px 8px;font-size:12px;font-weight:500;color:#111827;">${value}</td></tr>`;
 
-        <div class="section">
-          <div class="section-title">Datos Académicos</div>
-          <div class="grid">
-            <div class="field"><span class="label">Grado Solicitado:</span> <span class="value">${gradeLevelLabel(app.gradeLevel)}</span></div>
-            <div class="field"><span class="label">Jornada:</span> <span class="value">${shiftLabel(app.shift)}</span></div>
-            <div class="field"><span class="label">Especialidad:</span> <span class="value">${specialtyLabel(app.specialty)}</span></div>
-            <div class="field"><span class="label">Institución Anterior:</span> <span class="value">${app.previousSchool || '-'}</span></div>
-            <div class="field"><span class="label">Promedio Anterior:</span> <span class="value">${app.lastYearAverage != null ? Number(app.lastYearAverage).toFixed(2) : '-'}</span></div>
-          </div>
-        </div>
+    const sectionTitle = (t: string, color = '#1e3a8a') =>
+      `<div style="background:${color};color:#fff;padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:16px;letter-spacing:0.5px;">${t}</div>`;
 
-        <div class="section">
-          <div class="section-title">Representante Legal</div>
-          <div class="grid">
-            <div class="field"><span class="label">Nombres:</span> <span class="value">${app.representativeData?.names || '-'}</span></div>
-            <div class="field"><span class="label">Cédula:</span> <span class="value">${app.representativeData?.cedula || '-'}</span></div>
-            <div class="field"><span class="label">Teléfono:</span> <span class="value">${app.representativeData?.phone || '-'}</span></div>
-            <div class="field"><span class="label">Email:</span> <span class="value">${app.representativeData?.email || '-'}</span></div>
-            <div class="field"><span class="label">Ocupación:</span> <span class="value">${app.representativeData?.occupation || '-'}</span></div>
-          </div>
-        </div>
+    const table = (rows: string) =>
+      `<table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 4px 4px;background:#fff;">${rows}</table>`;
 
-        ${app.fatherData ? `
-        <div class="section">
-          <div class="section-title">Datos del Padre</div>
-          <div class="grid">
-            <div class="field"><span class="label">Nombres:</span> <span class="value">${app.fatherData.names || '-'}</span></div>
-            <div class="field"><span class="label">Cédula:</span> <span class="value">${app.fatherData.cedula || '-'}</span></div>
-            <div class="field"><span class="label">Teléfono:</span> <span class="value">${app.fatherData.phone || '-'}</span></div>
-          </div>
-        </div>` : ''}
+    const nowStr = new Date().toLocaleDateString('es-EC', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    });
 
-        ${app.motherData ? `
-        <div class="section">
-          <div class="section-title">Datos de la Madre</div>
-          <div class="grid">
-            <div class="field"><span class="label">Nombres:</span> <span class="value">${app.motherData.names || '-'}</span></div>
-            <div class="field"><span class="label">Cédula:</span> <span class="value">${app.motherData.cedula || '-'}</span></div>
-            <div class="field"><span class="label">Teléfono:</span> <span class="value">${app.motherData.phone || '-'}</span></div>
-          </div>
-        </div>` : ''}
+    return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; background: #fff; font-size: 12px; line-height: 1.5; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    @page { size: A4; margin: 15mm; }
+  </style>
+</head>
+<body>
 
-        <div class="footer">
-          <p>Generado el ${new Date().toLocaleString()} | ID: ${app.id}</p>
-          <p>Este documento es un comprobante de la solicitud de admisión.</p>
-        </div>
-      </body>
-      </html>
-    `;
+  <!-- HEADER -->
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #1e3a8a;padding-bottom:12px;margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      ${logoTag}
+      <div>
+        <div style="font-size:16px;font-weight:700;color:#1e3a8a;">Unidad Educativa Fiscomisional Don Bosco</div>
+        <div style="font-size:11px;color:#6b7280;">Sistema Integrado de Admisiones y Matrículas</div>
+        <div style="font-size:11px;color:#6b7280;">Período Lectivo 2026–2027</div>
+      </div>
+    </div>
+    <div>
+      ${photoTag}
+    </div>
+  </div>
+
+  <!-- TÍTULO + ESTADO -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div>
+      <div style="font-size:18px;font-weight:700;color:#111827;">Ficha de Admisión</div>
+      <div style="font-size:11px;color:#6b7280;">ID: ${app.id}</div>
+    </div>
+    <div style="background:${this.statusBg(app.status)};color:${this.statusColor(app.status)};padding:6px 14px;border-radius:20px;font-weight:700;font-size:13px;border:1px solid currentColor;">
+      ${this.statusLabel(app.status)}
+    </div>
+  </div>
+
+  <!-- DATOS DEL ESTUDIANTE -->
+  ${sectionTitle('INFORMACIÓN DEL ESTUDIANTE')}
+  ${table(`
+    ${row('Apellidos', (app.studentLastName || '—').toUpperCase())}
+    ${row('Nombres', (app.studentFirstName || '—').toUpperCase())}
+    ${row('Cédula / Pasaporte', app.studentCedula || '—')}
+    ${row('Fecha de Nacimiento', this.formatDate(app.studentBirthDate))}
+    ${row('Género', genderLabel(app.studentGender))}
+    ${row('Nacionalidad', app.studentNationality || '—')}
+    ${row('Dirección', app.studentAddress || '—')}
+    ${app.studentEmail ? row('Correo Electrónico', app.studentEmail) : ''}
+    ${app.studentPhone ? row('Teléfono', app.studentPhone) : ''}
+  `)}
+
+  <!-- DATOS ACADÉMICOS -->
+  ${sectionTitle('DATOS ACADÉMICOS', '#1e40af')}
+  ${table(`
+    ${row('Grado Solicitado', this.gradeLevelLabel(app.gradeLevel))}
+    ${row('Jornada', shiftLabel(app.shift))}
+    ${row('Especialidad', this.specialtyLabel(app.specialty))}
+    ${row('Institución de Procedencia', app.previousSchool || '—')}
+    ${row('Promedio Año Anterior', app.lastYearAverage != null ? Number(app.lastYearAverage).toFixed(2) : '—')}
+    ${app.assignedParallel ? row('Paralelo Asignado', app.assignedParallel) : ''}
+  `)}
+
+  <!-- REPRESENTANTE LEGAL -->
+  ${sectionTitle('REPRESENTANTE LEGAL', '#065f46')}
+  ${table(`
+    ${row('Nombres y Apellidos', app.representativeData?.names || '—')}
+    ${row('Cédula', app.representativeData?.cedula || '—')}
+    ${row('Teléfono', app.representativeData?.phone || '—')}
+    ${row('Correo Electrónico', app.representativeData?.email || '—')}
+    ${row('Ocupación / Empresa', app.representativeData?.occupation || '—')}
+    ${app.representativeData?.address ? row('Dirección', app.representativeData.address) : ''}
+  `)}
+
+  ${app.fatherData ? `
+  <!-- PADRE -->
+  ${sectionTitle('DATOS DEL PADRE', '#4c1d95')}
+  ${table(`
+    ${row('Nombres y Apellidos', app.fatherData.names || '—')}
+    ${row('Cédula', app.fatherData.cedula || '—')}
+    ${row('Teléfono', app.fatherData.phone || '—')}
+    ${app.fatherData.email ? row('Correo Electrónico', app.fatherData.email) : ''}
+    ${app.fatherData.occupation ? row('Ocupación', app.fatherData.occupation) : ''}
+  `)}` : ''}
+
+  ${app.motherData ? `
+  <!-- MADRE -->
+  ${sectionTitle('DATOS DE LA MADRE', '#4c1d95')}
+  ${table(`
+    ${row('Nombres y Apellidos', app.motherData.names || '—')}
+    ${row('Cédula', app.motherData.cedula || '—')}
+    ${row('Teléfono', app.motherData.phone || '—')}
+    ${app.motherData.email ? row('Correo Electrónico', app.motherData.email) : ''}
+    ${app.motherData.occupation ? row('Ocupación', app.motherData.occupation) : ''}
+  `)}` : ''}
+
+  <!-- INFORMACIÓN DEL PROCESO -->
+  ${sectionTitle('INFORMACIÓN DEL PROCESO', '#374151')}
+  ${table(`
+    ${row('Fecha de Envío', this.formatDate(app.submittedAt))}
+    ${app.paymentDate ? row('Fecha de Pago', this.formatDate(app.paymentDate)) : ''}
+    ${app.paymentReference ? row('Referencia de Pago', app.paymentReference) : ''}
+    ${app.processedAt ? row('Fecha de Procesado', this.formatDate(app.processedAt)) : ''}
+    ${row('Acepta Ideario Institucional', app.acceptedIdeario ? 'Sí' : 'No')}
+  `)}
+
+  <!-- FIRMA -->
+  <div style="margin-top:40px;display:flex;justify-content:space-between;gap:20px;">
+    <div style="text-align:center;flex:1;">
+      <div style="border-top:1px solid #374151;padding-top:6px;font-size:11px;color:#374151;">
+        <div style="font-weight:600;">Representante Legal</div>
+        <div style="color:#6b7280;">${app.representativeData?.names || '________________________'}</div>
+        <div style="color:#6b7280;">C.I.: ${app.representativeData?.cedula || '___________________'}</div>
+      </div>
+    </div>
+    <div style="text-align:center;flex:1;">
+      <div style="border-top:1px solid #374151;padding-top:6px;font-size:11px;color:#374151;">
+        <div style="font-weight:600;">Secretaría / Responsable</div>
+        <div style="color:#6b7280;">________________________</div>
+        <div style="color:#6b7280;">Cargo: ___________________</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="margin-top:24px;border-top:1px solid #e5e7eb;padding-top:8px;text-align:center;font-size:9px;color:#9ca3af;">
+    <p>Documento generado el ${nowStr} | Sistema SIAM — UEFDB</p>
+    <p>Este documento es un comprobante oficial de la solicitud No. ${app.id}. Cualquier modificación no autorizada lo invalida.</p>
+  </div>
+
+</body>
+</html>`;
   }
 }

@@ -311,4 +311,12 @@ export class ApplicationsController {
   ) {
     return this.applicationsService.recordCursilloResult(id, result, notes);
   }
+
+  // Eliminar solicitud (admin) — libera cupo
+  @Delete('admin/:id')
+  @Roles('admin', 'superadmin', 'secretary', 'principal')
+  @ModuleAccess('admisiones')
+  adminRemove(@Param('id') id: string, @Request() req: any) {
+    return this.applicationsService.adminRemove(id, req.user.id);
+  }
 }

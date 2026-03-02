@@ -70,10 +70,24 @@ export class UploadsService {
       throw new BadRequestException('No tienes permiso para subir archivos a esta solicitud');
     }
 
-    // Solo permitir uploads en estado DRAFT o REQUIRES_CORRECTION
-    if (!['DRAFT', 'REQUIRES_CORRECTION'].includes(application.status)) {
-      throw new BadRequestException('Solo se pueden subir documentos a solicitudes en borrador');
+    // Validar estado según tipo de documento
+    const isPaymentReceipt = documentType === 'PAYMENT_RECEIPT';
+
+    if (isPaymentReceipt) {
+      // El comprobante de pago solo se puede subir después de ser aprobado (directo o vía cursillo)
+      const allowedForPayment = ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED'];
+      if (!allowedForPayment.includes(application.status)) {
+        throw new BadRequestException(
+          'El comprobante de pago solo puede subirse una vez que la solicitud esté aprobada (o el cursillo aprobado).'
+        );
+      }
+    } else {
+      // Documentos normales: solo en DRAFT o REQUIRES_CORRECTION
+      if (!['DRAFT', 'REQUIRES_CORRECTION'].includes(application.status)) {
+        throw new BadRequestException('Solo se pueden subir documentos a solicitudes en borrador o que requieren corrección');
+      }
     }
+
 
     // Validar archivo
     this.validateFile(file);

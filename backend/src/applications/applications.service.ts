@@ -353,9 +353,39 @@ export class ApplicationsService {
     }
   }
 
+  /**
+   * Eliminar solicitud completa (liberar cupo).
+   * Solo para admins, y solo si la solicitud está en REJECTED o CURSILLO_REJECTED.
+   */
+  async adminRemove(id: string, adminUserId: string) {
+    const application = await this.prisma.application.findUnique({ where: { id } });
+    if (!application) throw new NotFoundException('Solicitud no encontrada');
+
+    const allowedStatuses: ApplicationStatus[] = ['REJECTED', 'CURSILLO_REJECTED'];
+    if (!allowedStatuses.includes(application.status as ApplicationStatus)) {
+      throw new BadRequestException(
+        `Solo se puede eliminar solicitudes con estado REJECTED o CURSILLO_REJECTED. Estado actual: ${application.status}`
+      );
+    }
+
+    const studentName = `${application.studentFirstName} ${application.studentLastName}`;
+    await this.prisma.application.delete({ where: { id } });
+
+    await this.auditService.create({
+      action: 'ADMIN_DELETE_APPLICATION',
+      entity: 'Application',
+      entityId: id,
+      userId: adminUserId,
+      details: { student: studentName, previousStatus: application.status },
+    });
+
+    return { message: `Solicitud de ${studentName} eliminada. Cupo liberado.`, id };
+  }
+
   // === MÉTODOS PARA ADMIN ===
 
   // Estadísticas globales
+
   async getGlobalStats() {
     const applications = await this.prisma.application.findMany({
       select: { status: true },
@@ -595,8 +625,9 @@ export class ApplicationsService {
     return updatedApp;
   }
 
-  // Asignar a directivo
+
   async assignToDirectivo(id: string, directivoId: string, assignedBy: string) {
+
     const updatedApp = await this.prisma.application.update({
       where: { id },
       data: {
@@ -1083,7 +1114,11 @@ export class ApplicationsService {
 
     const missingFields = requiredFields.filter(field => !application[field]);
 
-    const isBGU = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(application.gradeLevel || '');
+    const isBGU = [
+      '1ero BGU', '2do BGU', '3ro BGU',
+      // retrocompatibilidad
+      '1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato',
+    ].includes(application.gradeLevel || '');
     if (isBGU && !application.specialty) {
       missingFields.push('specialty');
     }

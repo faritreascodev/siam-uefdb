@@ -225,7 +225,13 @@ export class QuotasService {
    */
   requiresCursillo(gradeLevel: string, previousSchool?: string): boolean {
     const grade = gradeLevel.toUpperCase();
-    const isSpecialGrade = grade.includes('8VO') || grade.includes('1RO BGU') || grade.includes('1ERO BGU');
+    // Soporta formato nuevo ('8vo EGB', '1ero BGU') y legado ('8vo_basico', '1ro_bachillerato')
+    const isSpecialGrade =
+      grade.includes('8VO') ||
+      grade.includes('1RO BGU') ||
+      grade.includes('1ERO BGU') ||
+      grade === '8VO_BASICO' ||
+      grade === '1RO_BACHILLERATO';
 
     if (!isSpecialGrade) return false;
 
@@ -237,6 +243,6 @@ export class QuotasService {
       }
     }
 
-    return true; // Es de otra institución y es el grado especial
+    return true;
   }
 }
