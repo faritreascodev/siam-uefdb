@@ -4,7 +4,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: academyc-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -14,8 +13,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d academyc_db"]
       interval: 10s
@@ -27,7 +24,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: academyc-backend
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-4000}:4000"
@@ -36,13 +32,12 @@ services:
       JWT_SECRET: "super-secret-jwt-key-change-in-production-12345"
       JWT_EXPIRATION: "7d"
       PORT: "4000"
-    networks:
-      - app-network
+      FRONTEND_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     depends_on:
       postgres:
         condition: service_healthy
     # Start app after migrating db
-    command: sh -c "npx prisma migrate deploy && npm run start:prod"
+    command: sh -c "npx prisma migrate deploy && pnpm run start:prod"
 
   # Next.js Frontend
   frontend:
@@ -51,7 +46,6 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:4000}
-    container_name: academyc-frontend
     restart: unless-stopped
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
@@ -59,14 +53,8 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:4000}
       NEXTAUTH_SECRET: "super-secret-nextauth-key-change-in-production-67890"
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-    networks:
-      - app-network
     depends_on:
       - backend
-
-networks:
-  app-network:
-    driver: bridge
 
 volumes:
   postgres_data:
