@@ -21,14 +21,20 @@ export async function createApplication(token: string): Promise<Application> {
 
 // Helper function to clean data before sending to API
 function cleanApplicationData(data: Partial<Application>): Partial<Application> {
-  // List of fields that should NOT be sent to the backend on update
+  // ALL fields that should NOT be sent to the backend on update (read-only / managed by backend)
   const readOnlyFields = [
-    'id', 'status', 'submittedAt', 'userId', 'assignedToId', 'assignedAt',
-    'processedById', 'processedAt', 'cursilloScheduled', 'cursilloDate',
-    'cursilloResult', 'cursilloNotes', 'acceptedAt', 'adminNotes',
-    'rejectionReason', 'correctionRequest', 'internalComments',
-    'createdAt', 'updatedAt', 'documents', 'user', 'assignedParallel',
-    'paymentDate', 'paymentReference', 'paymentAmount'
+    'id', 'status', 'submittedAt', 'userId',
+    'assignedToId', 'assignedTo', 'assignedAt',
+    'processedById', 'processedBy', 'processedAt',
+    'cursilloScheduled', 'cursilloDate', 'cursilloResult',
+    'cursilloNotes', 'cursilloSessionId', 'cursilloEnrollments',
+    'acceptedAt', 'adminNotes', 'rejectionReason', 'correctionRequest',
+    'internalComments', 'notifications',
+    'createdAt', 'updatedAt',
+    'documents', 'user', 'extraContacts_ids',
+    'assignedParallel',
+    'paymentDate', 'paymentReference', 'paymentAmount',
+    'paymentValidatedAt', 'paymentValidatedBy', 'paymentRejectionReason',
   ];
 
   const cleaned = { ...data };

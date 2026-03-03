@@ -7,20 +7,30 @@ import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { signOut } from "next-auth/react"
 import { useRoles } from "@/hooks/use-roles"
-import { Home, Users, Settings, LogOut, FileText, Calendar, Monitor, History } from "lucide-react"
+import {
+  Home, Users, Settings, LogOut, FileText,
+  Calendar, Monitor, History, GraduationCap, BarChart3,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import { getSystemConfigs } from "@/lib/api-config"
 import { useSession } from "next-auth/react"
 
-// ... imports
-
 export function AdminSidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const { hasAdminAccess, isAdmin, isSuperAdmin, isSecretary, isDirectivo } = useRoles()
-  const isFullAdmin = isAdmin() || isSuperAdmin()
+  const {
+    isFullAdmin,
+    isAdmin,
+    isSuperAdmin,
+    isPrincipal,
+    isSecretary,
+    canManageUsers,
+    canViewAudit,
+    canAccessSettings,
+  } = useRoles()
 
-  const [secModules, setSecModules] = useState<any>({
+  // Secretary configurable modules (loaded from system config)
+  const [secModules, setSecModules] = useState<Record<string, boolean>>({
     dashboard: true,
     admisiones: true,
     matriculacion: true,
@@ -29,102 +39,123 @@ export function AdminSidebar() {
     reportes: false,
     usuarios: false,
     configuracion: false,
-    auditoria: false
+    auditoria: false,
   })
 
-  // To maintain compatibility with existing functionality
-  const [canSecretaryManageUsers, setCanSecretaryManageUsers] = useState(false)
-
   useEffect(() => {
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken
-    if (token) {
-      getSystemConfigs(token).then((configs) => {
-        const confUsers = configs.find((c: any) => c.key === 'SECRETARY_MANAGE_USERS')
-        if (confUsers?.value === 'true') {
-          setCanSecretaryManageUsers(true)
-        }
+    const token = (session as any)?.accessToken || (session?.user as any)?.accessToken
+    if (!token) return
 
-        const confModules = configs.find((c: any) => c.key === 'SECRETARY_MODULES')
-        if (confModules?.value) {
-          try {
-            setSecModules(JSON.parse(confModules.value))
-          } catch (e) {
-            console.error(e)
-          }
-        }
-      }).catch(console.error)
-    }
+    getSystemConfigs(token).then((configs: any[]) => {
+      const confModules = configs.find((c) => c.key === "SECRETARY_MODULES")
+      if (confModules?.value) {
+        try {
+          setSecModules(JSON.parse(confModules.value))
+        } catch { }
+      }
+    })
   }, [session])
 
   const isSec = isSecretary()
+  const isPrinc = isPrincipal()
+  const fullAdmin = isFullAdmin()
 
+  /**
+   * Nav item visibility rules:
+   *  superadmin / admin  → everything
+   *  principal (rector)  → dashboard, admissions, cursillo, reports (read-only)
+   *  secretary           → whatever is enabled in SECRETARY_MODULES config
+   */
   const navItems = [
     {
+      id: "dashboard",
       title: "Dashboard",
       href: "/admin",
       icon: Home,
-      show: isFullAdmin || isDirectivo() || (isSec && secModules.dashboard),
+      show: fullAdmin || isPrinc || (isSec && secModules.dashboard),
+      exact: true,
     },
     {
+      id: "admisiones",
       title: "Solicitudes",
       href: "/admin/admisiones",
       icon: FileText,
-      show: isFullAdmin || isDirectivo() || (isSec && secModules.admisiones),
+      show: fullAdmin || isPrinc || (isSec && secModules.admisiones),
     },
     {
+      id: "cursillos",
       title: "Cursillos",
       href: "/admin/cursillos",
       icon: Calendar,
-      show: isFullAdmin || isDirectivo() || (isSec && secModules.cursillos),
+      show: fullAdmin || isPrinc || (isSec && secModules.cursillos),
     },
     {
-      title: "Usuarios",
-      href: "/admin/users",
-      icon: Users,
-      show: isFullAdmin || (isSec && canSecretaryManageUsers) || (isSec && secModules.usuarios),
-    },
-    {
-      title: "Configuración",
-      href: "/admin/settings",
-      icon: Settings,
-      show: isFullAdmin || (isSec && secModules.configuracion),
-    },
-    {
-      title: "Auditoría",
-      href: "/admin/auditoria",
-      icon: History,
-      show: isFullAdmin || (isSec && secModules.auditoria),
-    },
-    {
+      id: "cupos",
       title: "Monitor Cursos",
       href: "/admin/cursos",
       icon: Monitor,
-      show: isFullAdmin || isDirectivo() || (isSec && secModules.matriculacion),
+      show: fullAdmin || (isSec && secModules.matriculacion),
+    },
+    {
+      id: "reportes",
+      title: "Reportes",
+      href: "/admin/reportes",
+      icon: BarChart3,
+      // Principal can read reports; secretary only if enabled
+      show: fullAdmin || isPrinc || (isSec && secModules.reportes),
+    },
+    {
+      id: "usuarios",
+      title: "Usuarios",
+      href: "/admin/users",
+      icon: Users,
+      // Only admin+ can manage users; secretary only if configured
+      show: canManageUsers() || (isSec && secModules.usuarios),
+    },
+    {
+      id: "configuracion",
+      title: "Configuración",
+      href: "/admin/settings",
+      icon: Settings,
+      // Principal cannot configure; secretary only if enabled
+      show: canAccessSettings() || (isSec && secModules.configuracion),
+    },
+    {
+      id: "auditoria",
+      title: "Auditoría",
+      href: "/admin/auditoria",
+      icon: History,
+      show: canViewAudit() || (isSec && secModules.auditoria),
     },
   ]
+
+  const visibleItems = navItems.filter((item) => item.show)
 
   return (
     <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
       <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
+        {/* Logo / home link */}
         <Link
-          href={(isFullAdmin || isDirectivo()) ? "/admin" : "/admin/admisiones"}
+          href={fullAdmin || isPrinc ? "/admin" : "/admin/admisiones"}
           className="group flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:h-8 md:w-8 md:text-base"
         >
-          <Home className="h-4 w-4 transition-all group-hover:scale-110" />
-          <span className="sr-only">Admin Dashboard</span>
+          <GraduationCap className="h-4 w-4 transition-all group-hover:scale-110" />
+          <span className="sr-only">SIAM — Panel Admin</span>
         </Link>
 
         <TooltipProvider>
-          {navItems.filter(item => item.show).map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/")
 
             return (
               <Tooltip key={item.href}>
                 <TooltipTrigger asChild>
                   <Link
                     href={item.href}
+                    id={`sidebar-${item.id}`}
                     className={cn(
                       "flex h-9 w-9 items-center justify-center rounded-lg transition-colors hover:text-foreground md:h-8 md:w-8",
                       isActive
@@ -143,7 +174,7 @@ export function AdminSidebar() {
         </TooltipProvider>
       </nav>
 
-
+      {/* Bottom — sign out */}
       <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
         <TooltipProvider>
           <Tooltip>
@@ -151,6 +182,7 @@ export function AdminSidebar() {
               <Button
                 variant="ghost"
                 size="icon"
+                id="sidebar-logout"
                 className="h-9 w-9 md:h-8 md:w-8"
                 onClick={() => signOut({ callbackUrl: "/login" })}
               >

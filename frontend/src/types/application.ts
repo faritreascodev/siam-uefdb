@@ -14,7 +14,7 @@ export type ApplicationStatus =
   | 'CURSILLO_APPROVED'
   | 'CURSILLO_REJECTED';
 
-export type Gender = 'M' | 'F';
+export type Gender = 'M' | 'F' | 'OTHER';
 export type Shift = 'MORNING' | 'AFTERNOON';
 
 export type DocumentType =
@@ -218,19 +218,25 @@ export const DOCUMENT_LABELS: Record<DocumentType, string> = {
 };
 
 export const GRADE_LEVELS = [
-  { value: 'inicial_1', label: 'Inicial 1' },
-  { value: 'inicial_2', label: 'Inicial 2' },
-  { value: '1ro_basico', label: '1ro Básico' },
-  { value: '2do_basico', label: '2do Básico' },
-  { value: '3ro_basico', label: '3ro Básico' },
-  { value: '4to_basico', label: '4to Básico' },
-  { value: '5to_basico', label: '5to Básico' },
-  { value: '6to_basico', label: '6to Básico' },
-  { value: '7mo_basico', label: '7mo Básico' },
-  { value: '8vo_basico', label: '8vo Básico' },
-  { value: '9no_basico', label: '9no Básico' },
-  { value: '10mo_basico', label: '10mo Básico' },
-  { value: '1ro_bachillerato', label: '1ro Bachillerato' },
-  { value: '2do_bachillerato', label: '2do Bachillerato' },
-  { value: '3ro_bachillerato', label: '3ro Bachillerato' },
+  { value: 'Inicial 1', label: 'Inicial 1 (3 años)' },
+  { value: 'Inicial 2', label: 'Inicial 2 (4 años)' },
+  { value: '1ero EGB', label: '1ro Básico' },
+  { value: '2do EGB', label: '2do Básico' },
+  { value: '3ro EGB', label: '3ro Básico' },
+  { value: '4to EGB', label: '4to Básico' },
+  { value: '5to EGB', label: '5to Básico' },
+  { value: '6to EGB', label: '6to Básico' },
+  { value: '7mo EGB', label: '7mo Básico' },
+  { value: '8vo EGB', label: '8vo Básico' },
+  { value: '9no EGB', label: '9no Básico' },
+  { value: '10mo EGB', label: '10mo Básico' },
+  { value: '1ero BGU', label: '1ro Bachillerato' },
+  { value: '2do BGU', label: '2do Bachillerato' },
+  { value: '3ro BGU', label: '3ro Bachillerato' },
 ];
+
+// Grados que requieren cursillo si el estudiante viene de otra institución
+export const CURSILLO_GRADES = ['8vo EGB', '1ero BGU'];
+
+// Grados de bachillerato que requieren especialidad
+export const BGU_GRADES = ['1ero BGU', '2do BGU', '3ro BGU'];

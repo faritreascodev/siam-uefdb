@@ -225,15 +225,39 @@ export async function getAssignedApplications(
   return res.json();
 }
 
-// Descargar PDF de solicitud
-export async function downloadApplicationPdf(token: string, id: string): Promise<Blob> {
+// Descargar PDF de solicitud — descarga directa en el navegador
+export async function downloadApplicationPdf(
+  token: string,
+  id: string,
+  studentName?: string,
+  cedula?: string,
+): Promise<void> {
   const res = await fetch(`${API_URL}/reports/application/${id}/pdf`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { Authorization: `Bearer ${token}` },
   });
-  if (!res.ok) throw new Error('Error al descargar PDF');
-  return res.blob();
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Error al generar el PDF');
+  }
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+
+  // Nombre de archivo descriptivo
+  const namePart = studentName
+    ? studentName.replace(/\s+/g, '_').toUpperCase()
+    : id.slice(0, 8).toUpperCase();
+  const cedulaPart = cedula ? `_${cedula}` : '';
+  const filename = `Ficha_Admision_${namePart}${cedulaPart}.pdf`;
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 // Obtener paralelos disponibles
@@ -308,6 +332,21 @@ export async function validatePayment(
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.message || 'Error al validar pago');
+  }
+  return res.json();
+}
+
+// Eliminar solicitud (liberar cupo) — solo para REJECTED o CURSILLO_REJECTED
+export async function adminRemoveApplication(token: string, id: string): Promise<{ message: string; id: string }> {
+  const res = await fetch(`${API_URL}/applications/admin/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.message || 'Error al eliminar solicitud');
   }
   return res.json();
 }

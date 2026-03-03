@@ -1,17 +1,21 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function getSystemConfigs(token: string) {
-    const response = await fetch(`${API_URL}/system-config`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-        },
-    });
+    try {
+        const response = await fetch(`${API_URL}/system-config`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+        });
 
-    if (!response.ok) {
-        throw new Error('Failed to fetch system configurations');
+        if (!response.ok) {
+            return []; // Return empty array silently - non-critical feature
+        }
+
+        return response.json();
+    } catch {
+        return []; // Network error - return empty, sidebar will use defaults
     }
-
-    return response.json();
 }
 
 export async function updateSystemConfig(token: string, key: string, value: string) {
