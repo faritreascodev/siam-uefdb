@@ -169,8 +169,8 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
 
     const missingFields = requiredFields.filter((f) => !(formData as any)[f.key]);
 
-    // Check specialty for BGU
-    const isBGU = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(formData.gradeLevel || '');
+    // Check specialty for BGU (nuevo formato y retrocompatibilidad)
+    const isBGU = ['1ero BGU', '2do BGU', '3ro BGU', '1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(formData.gradeLevel || '');
     if (isBGU && !formData.specialty) {
       missingFields.push({ key: 'specialty', label: 'Especialidad (Bachillerato)' });
     }

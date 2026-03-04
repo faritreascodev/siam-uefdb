@@ -56,9 +56,17 @@ export default function ApoderadoLayout({
             </Link>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Botón volver al Dashboard */}
+            <Button variant="ghost" size="sm" asChild className="hidden md:flex">
+              <Link href="/dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </Link>
+            </Button>
+
             {/* Botón Nueva Solicitud */}
-            <Button asChild>
+            <Button asChild size="sm">
               <Link href="/apoderado/solicitudes/nueva">
                 <Plus className="mr-2 h-4 w-4" />
                 Nueva Solicitud
@@ -66,10 +74,10 @@ export default function ApoderadoLayout({
             </Button>
 
             {/* Enlace al Ideario */}
-            <Button variant="outline" size="sm" asChild className="hidden md:flex">
+            <Button variant="outline" size="sm" asChild className="hidden lg:flex">
               <a href="/ideario-institucional.pdf" target="_blank" rel="noopener noreferrer">
                 <BookOpen className="mr-2 h-4 w-4" />
-                Ideario Institucional
+                Ideario
               </a>
             </Button>
 

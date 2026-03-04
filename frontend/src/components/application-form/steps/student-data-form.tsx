@@ -21,6 +21,8 @@ interface StudentDataFormProps {
 export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
   const { data: session } = useSession();
   const [searching, setSearching] = useState(false);
+  const [customGender, setCustomGender] = useState('');
+  const isOtherGender = data.studentGender === 'OTHER' as Gender;
 
   const handleChange = (field: keyof Application, value: any) => {
     onChange({ [field]: value });
@@ -124,17 +126,32 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
           <div className="space-y-2">
             <Label htmlFor="studentGender">Género *</Label>
             <Select
-              value={data.studentGender || undefined}
-              onValueChange={(value) => handleChange('studentGender', value as Gender)}
+              value={data.studentGender || ''}
+              onValueChange={(value) => {
+                handleChange('studentGender', value as Gender);
+                if (value !== 'OTHER') setCustomGender('');
+              }}
             >
-              <SelectTrigger>
+              <SelectTrigger id="studentGender">
                 <SelectValue placeholder="Seleccionar género" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="M">Masculino</SelectItem>
                 <SelectItem value="F">Femenino</SelectItem>
+                <SelectItem value="OTHER">Otro</SelectItem>
               </SelectContent>
             </Select>
+            {isOtherGender && (
+              <Input
+                placeholder="Especifique el género"
+                value={customGender}
+                onChange={(e) => {
+                  setCustomGender(e.target.value);
+                  // Store as a note or in a separate field if backend supports it
+                }}
+                className="mt-1"
+              />
+            )}
           </div>
 
           <div className="space-y-2">

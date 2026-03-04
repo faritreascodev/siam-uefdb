@@ -1,6 +1,8 @@
 import { LoginForm } from "@/components/auth/login-form";
 import { LoginCarousel } from "@/components/auth/login-carousel";
 import Image from "next/image";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -24,6 +26,13 @@ export default function LoginPage() {
             <p className="mt-2 text-sm text-gray-600 text-left">
               Ingresa tus credenciales para acceder al sistema académico.
             </p>
+            <Link
+              href="/"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Volver al portal
+            </Link>
           </div>
 
           <LoginForm />

@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getApplication, uploadDocument, uploadPaymentDetails } from '@/lib/api-applications';
+import { downloadApplicationPdf } from '@/lib/api-admin-applications';
 import { Application, STATUS_LABELS, STATUS_COLORS, DOCUMENT_LABELS, GRADE_LEVELS } from '@/types/application';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,8 @@ import {
   ExternalLink,
   CheckCircle,
   Video,
-  CreditCard
+  CreditCard,
+  FileDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -49,6 +51,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
   const [paymentDate, setPaymentDate] = useState<string>('');
   const [paymentReference, setPaymentReference] = useState<string>('');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // @ts-ignore
   const token = session?.accessToken || session?.user?.accessToken;
@@ -70,6 +73,20 @@ export default function ApplicationDetailPage({ params }: PageProps) {
 
     loadApplication();
   }, [id, token, router]);
+
+  const handleDownloadPdf = async () => {
+    if (!token || !application) return;
+    setPdfLoading(true);
+    try {
+      const fullName = `${application.studentLastName || ''}_${application.studentFirstName || ''}`;
+      await downloadApplicationPdf(token, application.id, fullName, application.studentCedula || undefined);
+      toast.success('PDF descargado correctamente');
+    } catch (err: any) {
+      toast.error(err.message || 'Error al descargar PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -145,13 +162,30 @@ export default function ApplicationDetailPage({ params }: PageProps) {
             </div>
           </div>
         </div>
-        {canEdit && (
-          <Button asChild>
-            <Link href={`/apoderado/solicitudes/${application.id}/editar`}>
-              {application.status === 'REQUIRES_CORRECTION' ? 'Subsanar' : 'Editar'}
-            </Link>
-          </Button>
-        )}
+        {/* Botones de acción */}
+        <div className="flex items-center gap-2">
+          {application.status !== 'DRAFT' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadPdf}
+              disabled={pdfLoading}
+              title="Descargar ficha en PDF"
+            >
+              {pdfLoading
+                ? <span className="h-4 w-4 animate-spin border-2 border-current border-t-transparent rounded-full inline-block mr-2" />
+                : <FileDown className="h-4 w-4 mr-2" />}
+              PDF
+            </Button>
+          )}
+          {canEdit && (
+            <Button asChild>
+              <Link href={`/apoderado/solicitudes/${application.id}/editar`}>
+                {application.status === 'REQUIRES_CORRECTION' ? 'Subsanar' : 'Editar'}
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Banner de Correcciones */}
@@ -292,43 +326,109 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         </Card>
       )}
 
-      {/* Cursillo Info */}
-      {(['CURSILLO_SCHEDULED', 'CURSILLO_APPROVED', 'CURSILLO_REJECTED'] as const).includes(application.status as any) && (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
-              <Video className="h-5 w-5" />
-              Cursillo de Admisión
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-blue-700 text-sm">
-              Este proceso requiere la aprobación de un cursillo de nivelación.
-              {application.cursilloDate && (
-                <span> Fecha programada: <strong>{format(new Date(application.cursilloDate), "d 'de' MMMM, yyyy HH:mm", { locale: es })}</strong></span>
-              )}
-            </p>
-            <a
-              href="https://teams.microsoft.com/meet/27512034425095?p=8iuRnTW4xVg0RJ2i8o"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <Video className="h-4 w-4" />
-              Unirse al Cursillo por Microsoft Teams
-            </a>
-            {application.cursilloResult && (
-              <div className={`p-3 rounded-lg text-sm font-medium ${application.cursilloResult === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                  application.cursilloResult === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                }`}>
-                Resultado del Cursillo: {application.cursilloResult === 'APPROVED' ? '✅ Aprobado' : application.cursilloResult === 'REJECTED' ? '❌ Reprobado' : '⏳ Pendiente'}
-                {application.cursilloNotes && <p className="mt-1 font-normal">{application.cursilloNotes}</p>}
+      {/* Cursillo de Nivelación */}
+      {(['CURSILLO_SCHEDULED', 'CURSILLO_APPROVED', 'CURSILLO_REJECTED'] as const).includes(application.status as any) && (() => {
+        const isApproved = application.cursilloResult === 'APPROVED';
+        const isRejected = application.cursilloResult === 'REJECTED';
+        const isPending = !application.cursilloResult;
+
+        // Parsear las notas del cursillo en materias legibles
+        // Formato esperado: "Matemáticas: 50% asistencia, 4/10 pts; Física: 75% asistencia, 5/10 pts"
+        const parsedSubjects = application.cursilloNotes
+          ? application.cursilloNotes.split(';').map(s => s.trim()).filter(Boolean)
+          : [];
+
+        const borderColor = isApproved ? 'border-green-200' : isRejected ? 'border-red-200' : 'border-blue-200';
+
+        return (
+          <Card className={borderColor} aria-label="Sección de cursillo de nivelación">
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Video className="h-5 w-5 text-blue-600" aria-hidden="true" />
+                  Cursillo de Nivelación
+                </CardTitle>
+                <Badge
+                  className={
+                    isApproved
+                      ? 'bg-green-100 text-green-800 border-green-300'
+                      : isRejected
+                        ? 'bg-red-100 text-red-800 border-red-300'
+                        : 'bg-blue-100 text-blue-800 border-blue-300'
+                  }
+                >
+                  {isApproved ? 'Aprobado' : isRejected ? 'Reprobado' : 'En curso'}
+                </Badge>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Mensaje específico por estado */}
+              {isPending && (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
+                  <p className="text-sm font-semibold text-blue-800">Cursillo programado</p>
+                  <p className="mt-1 text-sm text-blue-700">
+                    Su representado está inscrito en el cursillo de nivelación que inicia el{' '}
+                    {application.cursilloDate
+                      ? format(new Date(application.cursilloDate), "d 'de' MMMM 'de' yyyy", { locale: es })
+                      : '1 de abril de 2026'}.
+                    Las sesiones son en línea a través de Microsoft Teams.
+                  </p>
+                </div>
+              )}
+
+              {isApproved && (
+                <div className="rounded-md border border-green-200 bg-green-50 p-4">
+                  <p className="text-sm font-semibold text-green-800">Cursillo superado con éxito</p>
+                  <p className="mt-1 text-sm text-green-700">
+                    Su representado aprobó todas las materias del cursillo.
+                    El siguiente paso es realizar el pago de matrícula para completar el proceso de admisión.
+                  </p>
+                </div>
+              )}
+
+              {isRejected && (
+                <div className="space-y-3">
+                  <div className="rounded-md border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm font-semibold text-red-800">Cursillo no superado</p>
+                    <p className="mt-1 text-sm text-red-700">
+                      Lamentablemente su representado no alcanzó los requisitos mínimos en una o más materias
+                      del cursillo (asistencia mínima: 80%, nota mínima: 7/10).
+                      El cupo ha sido liberado y el proceso de admisión no puede continuar.
+                    </p>
+                  </div>
+                  {parsedSubjects.length > 0 && (
+                    <div className="rounded-md border border-red-100 bg-white p-3">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+                        Materias no aprobadas
+                      </p>
+                      <ul className="space-y-1" aria-label="Materias reprobadas">
+                        {parsedSubjects.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-red-700">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                            <span>{s}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button
+                asChild
+                variant={isRejected ? 'outline' : 'default'}
+                size="sm"
+                className={isRejected ? 'border-red-300 text-red-700 hover:bg-red-50' : ''}
+              >
+                <Link href={`/apoderado/solicitudes/${application.id}/cursillo`}>
+                  <ExternalLink className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Ver horarios, materias y resultado completo
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Datos del Estudiante */}
       <Card>
@@ -343,7 +443,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
             <InfoItem label="Nombres" value={application.studentFirstName} />
             <InfoItem label="Apellidos" value={application.studentLastName} />
             <InfoItem label="Cédula" value={application.studentCedula} />
-            <InfoItem label="Género" value={application.studentGender === 'M' ? 'Masculino' : 'Femenino'} />
+            <InfoItem label="Género" value={application.studentGender === 'M' ? 'Masculino' : application.studentGender === 'F' ? 'Femenino' : application.studentGender === 'OTHER' ? 'Otro' : undefined} />
             <InfoItem
               label="Fecha de Nacimiento"
               value={application.studentBirthDate

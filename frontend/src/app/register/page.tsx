@@ -1,6 +1,7 @@
 import { RegisterForm } from "@/components/auth/register-form";
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 
 export default function RegisterPage() {
   return (
@@ -20,6 +21,13 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-gray-600">
             Regístrate para acceder al sistema académico
           </p>
+          <Link
+            href="/"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Volver al portal
+          </Link>
         </div>
 
         <RegisterForm />
