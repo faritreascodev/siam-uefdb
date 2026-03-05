@@ -2,7 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Enable pnpm
+# Install OpenSSL for Prisma and enable pnpm
+RUN apk add --no-cache openssl
 RUN corepack enable pnpm
 
 # Copy package files
