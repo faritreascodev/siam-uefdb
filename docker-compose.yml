@@ -1,5 +1,10 @@
 version: '3.8'
 
+networks:
+  dokploy-network:
+    external: true
+  default:
+
 services:
   # PostgreSQL Database
   postgres:
@@ -9,8 +14,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "123"
       POSTGRES_DB: academyc_db
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,6 +21,9 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - dokploy-network
+      - default
 
   # NestJS Backend
   backend:
@@ -25,8 +31,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${BACKEND_PORT:-4000}:4000"
+    # Use expose instead of ports to avoid host binding conflicts with Traefik
+    expose:
+      - 4000
     environment:
       DATABASE_URL: "${DATABASE_URL:-postgresql://postgres:123@postgres:5432/academyc_db}"
       JWT_SECRET: "${JWT_SECRET:-super-secret-jwt-key-change-in-production-12345}"
@@ -36,8 +43,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    # Start app after migrating db
     command: sh -c "npx prisma migrate deploy && pnpm run start:prod"
+    networks:
+      - dokploy-network
+      - default
 
   # Next.js Frontend
   frontend:
@@ -47,14 +56,18 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:4000}
     restart: unless-stopped
-    ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+    # Use expose instead of ports
+    expose:
+      - 3000
     environment:
       NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://backend:4000}"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-change-in-production-67890}"
       NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
     depends_on:
       - backend
+    networks:
+      - dokploy-network
+      - default
 
 volumes:
   postgres_data:
