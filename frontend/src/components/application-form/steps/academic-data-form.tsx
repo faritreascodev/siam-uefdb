@@ -17,6 +17,16 @@ interface AcademicDataFormProps {
   onChange: (data: Partial<Application>) => void;
 }
 
+/** Determina si una institución es la UEFDB (no requiere cursillo) */
+function isUEFDB(school: string | null | undefined): boolean {
+  if (!school) return false;
+  const s = school.toUpperCase();
+  return ['DON BOSCO', 'UEFDB', 'FISCOMISIONAL DON BOSCO'].some((kw) => s.includes(kw));
+}
+
+const BGU_GRADES = ['1ero BGU', '2do BGU', '3ro BGU', '1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'];
+const CURSILLO_GRADES = ['8vo EGB', '1ero BGU', '8vo_basico', '1ro_bachillerato'];
+
 export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
   const { data: session } = useSession();
   // @ts-ignore
@@ -43,21 +53,75 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
     onChange({ [field]: value });
   };
 
-  const BGU_GRADES = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'];
-  const CURSILLO_GRADES = ['8vo_basico', '1ro_bachillerato'];
-  const TEST_GRADES = ['2do_basico', '3ro_basico', '4to_basico', '5to_basico', '6to_basico', '7mo_basico', '9no_basico', '10mo_basico', '2do_bachillerato', '3ro_bachillerato'];
-
-  const needsTest = TEST_GRADES.includes(data.gradeLevel || '');
   const isBGU = BGU_GRADES.includes(data.gradeLevel || '');
-
+  // El cursillo aplica únicamente si el grado lo requiere Y la escuela NO es la UEFDB
+  const gradeRequiresCursillo = CURSILLO_GRADES.includes(data.gradeLevel || '');
+  const comesFromOtherSchool = !isUEFDB(data.previousSchool);
   const needsCursillo = quotaInfo?.requiresCursillo ?? false;
-  const requiresCursillo = needsCursillo;
+
+  // Para mostrar el aviso anticipado (antes de que la API responda) cuando ya hay info suficiente
+  const showCursilloHint = gradeRequiresCursillo && !!data.previousSchool && comesFromOtherSchool;
 
   return (
-    <div className="space-y-6">
-      {/* Grado y Jornada */}
+    <div className="space-y-8">
+
+      {/* ─── 1. INSTITUCIÓN DE PROCEDENCIA (va PRIMERO) ─────────────────── */}
       <div>
-        <h3 className="text-lg font-medium mb-4">Grado a Cursar</h3>
+        <h3 className="text-lg font-medium mb-1">Institución de Procedencia</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Información del establecimiento educativo anterior del estudiante.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="previousSchool">Nombre de la Institución Anterior</Label>
+            <Input
+              id="previousSchool"
+              list="schools-list"
+              value={data.previousSchool || ''}
+              onChange={(e) => handleChange('previousSchool', e.target.value)}
+              placeholder="Nombre de la escuela o colegio anterior"
+              autoComplete="off"
+            />
+            <datalist id="schools-list">
+              {SCHOOLS.map((school) => (
+                <option key={school} value={school} />
+              ))}
+            </datalist>
+            {/* Indicador cuando viene de UEFDB */}
+            {data.previousSchool && isUEFDB(data.previousSchool) && (
+              <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                Estudiante de la UEFDB — no requiere cursillo de nivelacion para continuar.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="lastYearAverage">Promedio del Último Año</Label>
+            <Input
+              id="lastYearAverage"
+              type="number"
+              min="0"
+              max="10"
+              step="0.01"
+              value={data.lastYearAverage || ''}
+              onChange={(e) => {
+                const raw = parseFloat(e.target.value);
+                const rounded = isNaN(raw) ? undefined : Math.round(raw * 100) / 100;
+                handleChange('lastYearAverage', rounded);
+              }}
+              placeholder="8.5"
+            />
+            <p className="text-xs text-muted-foreground">En escala de 0 a 10</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 2. GRADO A CURSAR (va SEGUNDO) ─────────────────────────────── */}
+      <div>
+        <h3 className="text-lg font-medium mb-1">Grado a Cursar</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Seleccione el nivel educativo al que aspira el estudiante.
+        </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           {/* Grado */}
@@ -66,10 +130,9 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
             <Select
               value={data.gradeLevel || ''}
               onValueChange={(value) => {
-                const isBGU = ['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(value);
-                // Si cambia de nivel y ya no es BGU, limpiar especialidad
+                const isBGUValue = BGU_GRADES.includes(value);
                 handleChange('gradeLevel', value);
-                if (!isBGU) {
+                if (!isBGUValue) {
                   handleChange('specialty', undefined);
                 }
               }}
@@ -87,8 +150,8 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
             </Select>
           </div>
 
-          {/* Selector de Especialidad - Solo para BGU */}
-          {['1ro_bachillerato', '2do_bachillerato', '3ro_bachillerato'].includes(data.gradeLevel || '') && (
+          {/* Especialidad — solo BGU */}
+          {isBGU && (
             <div className="space-y-2">
               <Label htmlFor="specialty">Especialidad de Bachillerato *</Label>
               <Select
@@ -135,6 +198,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
               </p>
             )}
 
+            {/* Cupos disponibles */}
             {quotaInfo && (
               <div className={`text-xs px-2 py-1 rounded-md border mt-2 flex items-center justify-between
                 ${quotaInfo.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -150,81 +214,36 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
               </div>
             )}
 
-            {requiresCursillo && (
-              <div className="text-xs px-2 py-1 rounded-md border mt-2 bg-blue-50 text-blue-700 border-blue-200">
-                <span className="font-medium">Importante:</span> Este grado requiere la aprobación de un cursillo de nivelación.
+            {/* Nota de cursillo requerido (confirmado por API) */}
+            {needsCursillo && (
+              <div className="text-xs px-2 py-1 rounded-md border mt-2 bg-amber-50 text-amber-700 border-amber-200">
+                <span className="font-medium">Importante:</span> Este grado requiere la aprobación de un cursillo de nivelación para estudiantes de otras instituciones.
               </div>
             )}
           </div>
         </div>
+
+        {/* Banner de cursillo — aparece cuando ya hay institución ingresada + grado que lo requiere + no es UEFDB */}
+        {showCursilloHint && (
+          <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+            <p className="font-semibold text-amber-800 mb-1">
+              Cursillo de Admisión Requerido
+            </p>
+            <p className="text-amber-700">
+              Para <strong>{GRADE_LEVELS.find((g) => g.value === data.gradeLevel)?.label}</strong>, los estudiantes
+              provenientes de otra institución deben aprobar un cursillo de nivelación antes de la matriculación.
+              Una vez aprobada la solicitud, secretaría le programará el cursillo y le enviará los detalles de fechas, horarios y materias.
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Avisos según grado */}
-      {needsCursillo && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm">
-          <p className="font-semibold text-blue-800 mb-1">⚠️ Este grado requiere Cursillo de Admisión</p>
-          <p className="text-blue-700">
-            Para <strong>{GRADE_LEVELS.find(g => g.value === data.gradeLevel)?.label}</strong>, el proceso incluye un cursillo previo obligatorio antes de la matriculación. Una vez aprobada la solicitud, secretaría le programará el cursillo y le enviará los detalles.
-          </p>
-        </div>
-      )}
-
-      {needsTest && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
-          <p className="font-semibold text-amber-800 mb-1">📝 Este grado requiere Prueba de Admisión</p>
-          <p className="text-amber-700">
-            Para <strong>{GRADE_LEVELS.find(g => g.value === data.gradeLevel)?.label}</strong>, el proceso incluye una prueba de admisión.
-            Una vez aprobada la solicitud, recibirás detalles de fecha y hora para la evaluación.
-          </p>
-        </div>
-      )}
+      {/* ─── 3. HISTORIAL ACADÉMICO ──────────────────────────────────────── */}
       <div>
-        <h3 className="text-lg font-medium mb-4">Institución de Procedencia</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="previousSchool">Nombre de la Institución Anterior</Label>
-            <Input
-              id="previousSchool"
-              list="schools-list"
-              value={data.previousSchool || ''}
-              onChange={(e) => handleChange('previousSchool', e.target.value)}
-              placeholder="Nombre de la escuela o colegio anterior"
-            />
-            <datalist id="schools-list">
-              {SCHOOLS.map((school) => (
-                <option key={school} value={school} />
-              ))}
-            </datalist>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lastYearAverage">Promedio del Último Año</Label>
-            <Input
-              id="lastYearAverage"
-              type="number"
-              min="0"
-              max="10"
-              step="0.01"
-              value={data.lastYearAverage || ''}
-              onChange={(e) => {
-                const raw = parseFloat(e.target.value);
-                const rounded = isNaN(raw) ? undefined : Math.round(raw * 100) / 100;
-                handleChange('lastYearAverage', rounded);
-              }}
-              placeholder="8.5"
-              className={data.lastYearAverage && data.lastYearAverage < 7 ? "border-red-500 bg-red-50" : ""}
-            />
-            {data.lastYearAverage && data.lastYearAverage < 7 && (
-              <p className="text-xs text-red-600 font-medium">El promedio mínimo requerido es 7/10</p>
-            )}
-            <p className="text-xs text-muted-foreground">En escala de 0 a 10</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Historial de Repetición */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Historial Académico</h3>
+        <h3 className="text-lg font-medium mb-1">Historial Académico</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Información adicional relevante para el proceso de admisión.
+        </p>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
