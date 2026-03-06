@@ -115,6 +115,10 @@ export class ExtraContactDto {
 
 // DTO principal para crear/actualizar solicitud
 export class CreateApplicationDto {
+  @IsEnum(['NEW_STUDENT', 'RETURNING_STUDENT'])
+  @IsOptional()
+  enrollmentType?: 'NEW_STUDENT' | 'RETURNING_STUDENT';
+
   // Datos del Estudiante
   @IsString()
   @IsOptional()

@@ -84,8 +84,26 @@ export class ApplicationsService {
     // Validar campos requeridos
     this.validateRequiredFields(application);
 
+    // Validar historial académico si es estudiante antiguo
+    if (application.enrollmentType === 'RETURNING_STUDENT' && application.studentCedula) {
+      const record = await this.prisma.academicRecord.findFirst({
+        where: { studentCedula: application.studentCedula },
+        orderBy: { academicYear: 'desc' }
+      });
+
+      if (record) {
+        if (record.status === 'FAILED_YEAR') {
+          throw new BadRequestException('El estudiante reprobó el año lectivo anterior y debe repetir el curso, por favor contacte a secretaría.');
+        }
+        if (record.status.includes('PENDING')) {
+          throw new BadRequestException(`El estudiante no puede matricularse aún porque tiene exámenes pendientes (${record.status}).`);
+        }
+        // Si es PASSED, el sistema permitirá avanzar normalmente
+      }
+    }
+
     // Validar documentos requeridos
-    await this.validateRequiredDocuments(id);
+    await this.validateRequiredDocuments(application);
 
     const updatedApp = await this.prisma.application.update({
       where: { id },
@@ -1130,12 +1148,18 @@ export class ApplicationsService {
     }
   }
 
-  private async validateRequiredDocuments(applicationId: string) {
+  private async validateRequiredDocuments(application: any) {
     const documents = await this.prisma.applicationDocument.findMany({
-      where: { applicationId },
+      where: { applicationId: application.id },
     });
 
-    const requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL'];
+    let requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL'];
+
+    // Si es estudiante antiguo, no necesita certificado de notas ni planilla
+    if (application.enrollmentType === 'RETURNING_STUDENT') {
+      requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO'];
+    }
+
     const uploadedTypes = documents.map(d => d.documentType);
     const missingTypes = requiredTypes.filter(type => !uploadedTypes.includes(type as any));
 

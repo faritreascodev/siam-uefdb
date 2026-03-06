@@ -398,6 +398,7 @@ export default function ApplicationDetailPage({ params }: Props) {
               <CardContent className="space-y-2">
                 <InfoRow label="Nombres" value={`${application.studentFirstName} ${application.studentLastName}`} />
                 <InfoRow label="Cédula" value={application.studentCedula} />
+                <InfoRow label="Tipo Estudiante" value={application.enrollmentType === 'RETURNING_STUDENT' ? 'Estudiante Antiguo (Renovación)' : 'Estudiante Nuevo'} />
                 <InfoRow label="Género" value={application.studentGender === 'M' ? 'Masculino' : 'Femenino'} />
                 <InfoRow label="Fecha Nacimiento" value={application.studentBirthDate ? format(new Date(application.studentBirthDate), 'dd/MM/yyyy', { locale: es }) : null} />
                 <InfoRow label="Nacionalidad" value={application.studentNationality} />

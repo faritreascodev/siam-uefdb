@@ -75,6 +75,9 @@ export interface Application {
   status: ApplicationStatus;
   submittedAt?: string;
 
+  // Tipo de Estudiante
+  enrollmentType?: 'NEW_STUDENT' | 'RETURNING_STUDENT';
+
   // Datos del Estudiante
   studentFirstName?: string;
   studentLastName?: string;

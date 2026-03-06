@@ -190,11 +190,32 @@ enum NotificationPriority {
   URGENT
 }
 
+enum EnrollmentType {
+  NEW_STUDENT
+  RETURNING_STUDENT // Estudiante Antiguo (aplica para renovación de matrícula)
+}
+
+enum AcademicStatus {
+  PASSED               // Aprobado directo
+  SUPLETORIO_PENDING   // Promedio 4.00 - 6.99
+  SUPLETORIO_PASSED
+  SUPLETORIO_FAILED
+  REMEDIAL_PENDING     // Reprobó supletorio (15 días antes)
+  REMEDIAL_PASSED
+  REMEDIAL_FAILED
+  GRACIA_PENDING       // Reprobó remedial en una sola asignatura
+  GRACIA_PASSED
+  FAILED_YEAR          // Promedio < 4.00 o reprobó últimas instancias
+}
+
 // Application (Solicitud de Admisión)
 model Application {
   id          String            @id @default(uuid())
   status      ApplicationStatus @default(DRAFT)
   submittedAt DateTime?
+
+  // Tipo de Estudiante (Nuevo o Antiguo)
+  enrollmentType EnrollmentType @default(NEW_STUDENT)
 
   // Datos del Estudiante
   studentFirstName   String?
@@ -503,4 +524,37 @@ model SystemConfig {
   updatedBy String? // ID del admin que cambió la config
 
   @@map("system_configs")
+}
+
+// ========================================
+// ACADEMIC RECORDS (Student History)
+// ========================================
+
+model AcademicRecord {
+  id              String         @id @default(uuid())
+  studentCedula   String         // Reference to student
+  academicYear    String         // e.g. "2025-2026" (Previous year)
+  gradeLevel      String         // Grade that the student coursed
+  
+  // Notas y promedios
+  finalAverage    Decimal?       
+  status          AcademicStatus @default(PASSED)
+  
+  // Exámenes Extraordinarios
+  supletorioGrade Decimal?
+  remedialGrade   Decimal?
+  graciaGrade     Decimal?
+
+  // Asignaturas reprobadas
+  failedSubjectsCount Int @default(0)
+  
+  // Comportamiento
+  behaviorGrade   String? // A, B, C, D, E
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([studentCedula, academicYear])
+  @@index([studentCedula])
+  @@map("academic_records")
 }

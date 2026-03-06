@@ -75,6 +75,32 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
 
   return (
     <div className="space-y-6">
+      {/* Tipo de Admisión */}
+      <div className="bg-blue-50/50 p-6 rounded-lg border border-blue-100 mb-6">
+        <h3 className="text-lg font-medium mb-4 text-blue-900">Tipo de Admisión / Matrícula</h3>
+        <div className="space-y-2">
+          <Label htmlFor="enrollmentType" className="text-blue-800">Seleccione el estado actual del estudiante *</Label>
+          <Select
+            value={data.enrollmentType || 'NEW_STUDENT'}
+            onValueChange={(value) => handleChange('enrollmentType', value)}
+          >
+            <SelectTrigger id="enrollmentType" className="bg-white">
+              <SelectValue placeholder="Seleccione el tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NEW_STUDENT">
+                <div className="font-medium">Estudiante Nuevo</div>
+                <div className="text-xs text-muted-foreground">Proviene de otra institución o se inscribe por primera vez.</div>
+              </SelectItem>
+              <SelectItem value="RETURNING_STUDENT">
+                <div className="font-medium">Estudiante Antiguo (Renovación)</div>
+                <div className="text-xs text-muted-foreground">Ya pertenece a la institución y cursó el año lectivo anterior.</div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
       {/* Datos Personales */}
       <div>
         <h3 className="text-lg font-medium mb-4">Datos Personales</h3>
