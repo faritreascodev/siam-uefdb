@@ -28,8 +28,7 @@ export function NotificationCenter() {
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
   const [loading, setLoading] = useState(false);
 
-  // @ts-ignore - accessToken is added in next-auth callbacks
-  const accessToken = session?.accessToken || session?.user?.accessToken;
+  const accessToken = (session as any)?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
 
   const loadNotifications = useCallback(async () => {
     if (!accessToken) return;
@@ -57,8 +56,7 @@ export function NotificationCenter() {
   }, [loadNotifications]);
 
   const handleMarkAsRead = async (notificationId: string) => {
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken;
+    const token = (session as any)?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
     if (!token) return;
 
     try {
@@ -73,8 +71,7 @@ export function NotificationCenter() {
   };
 
   const handleMarkAllAsRead = async () => {
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken;
+    const token = (session as any)?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
     if (!token) return;
 
     try {
@@ -90,9 +87,21 @@ export function NotificationCenter() {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
     }
+
+    if (notification.actionUrl) {
+      let finalUrl = notification.actionUrl;
+      // Corregir URLs legacy
+      if (finalUrl.startsWith('/dashboard/solicitud/')) {
+        finalUrl = finalUrl.replace('/dashboard/solicitud/', '/apoderado/solicitudes/');
+      }
+      router.push(finalUrl);
+      setIsOpen(false);
+      return;
+    }
+
     if (notification.applicationId) {
-      // @ts-ignore
-      const roles: string[] = session?.user?.roles || [];
+      // Fallback for older notifications or if actionUrl is missing
+      const roles: string[] = (session?.user as { roles?: string[] })?.roles || [];
       const isApoderado = roles.includes('apoderado') || roles.length === 0;
       const path = isApoderado
         ? `/apoderado/solicitudes/${notification.applicationId}`

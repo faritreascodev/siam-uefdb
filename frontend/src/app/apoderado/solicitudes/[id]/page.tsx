@@ -230,7 +230,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
             <div className="bg-white p-4 rounded-lg border shadow-sm">
               <h4 className="font-semibold mb-2">Información de Pago</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 text-sm">
-                <p><span className="font-medium text-slate-500">Monto de matrícula:</span> $150.00</p>
+                <p><span className="font-medium text-slate-500">Monto de matrícula:</span> $60.00</p>
                 <p><span className="font-medium text-slate-500">Beneficiario:</span> Unidad Educativa Fiscomisional Don Bosco</p>
                 <p><span className="font-medium text-slate-500">RUC:</span> 1790000000001</p>
                 <p><span className="font-medium text-slate-500">Banco:</span> Banco Pichincha</p>
@@ -551,7 +551,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
               {application.documents.map((doc) => (
                 <a
                   key={doc.id}
-                  href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}${doc.fileUrl}`}
+                  href={`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '')}/${doc.fileUrl.replace(/^\/+/, '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent transition-colors"

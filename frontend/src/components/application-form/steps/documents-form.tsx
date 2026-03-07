@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { ApplicationDocument, DocumentType, DOCUMENT_LABELS } from '@/types/application';
 import { uploadDocument, deleteDocument } from '@/lib/api-applications';
@@ -8,24 +8,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { 
-  Upload, 
-  FileText, 
-  Image, 
-  Trash2, 
-  Check, 
+import {
+  Upload,
+  FileText,
+  Image,
+  Trash2,
+  Check,
   AlertCircle,
   Loader2,
-  Eye 
+  Eye
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface DocumentsFormProps {
   applicationId: string;
   documents: ApplicationDocument[];
+  enrollmentType?: 'NEW_STUDENT' | 'RETURNING_STUDENT';
 }
 
-const REQUIRED_DOCUMENTS: { type: DocumentType; accept: string }[] = [
+function getFileUrl(url?: string | null) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
+  return `${baseUrl}/${url.replace(/^\/+/, '')}`;
+}
+
+const ALL_DOCUMENTS: { type: DocumentType; accept: string }[] = [
   { type: 'STUDENT_ID', accept: '.pdf,.jpg,.jpeg,.png' },
   { type: 'REPRESENTATIVE_ID', accept: '.pdf,.jpg,.jpeg,.png' },
   { type: 'STUDENT_PHOTO', accept: '.jpg,.jpeg,.png' },
@@ -33,17 +41,35 @@ const REQUIRED_DOCUMENTS: { type: DocumentType; accept: string }[] = [
   { type: 'UTILITY_BILL', accept: '.pdf,.jpg,.jpeg,.png' },
 ];
 
-export function DocumentsForm({ applicationId, documents: initialDocuments }: DocumentsFormProps) {
+export function DocumentsForm({ applicationId, documents: initialDocuments, enrollmentType }: DocumentsFormProps) {
   const { data: session } = useSession();
   const [documents, setDocuments] = useState<ApplicationDocument[]>(initialDocuments);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [dynamicReqs, setDynamicReqs] = useState<{ new: DocumentType[], ret: DocumentType[] } | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/public-config`)
+      .then(r => r.json())
+      .then(data => {
+        let n = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL'];
+        let r = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO'];
+        if (data.REQUIRED_DOCUMENTS_NEW) {
+          try { n = JSON.parse(data.REQUIRED_DOCUMENTS_NEW); } catch { }
+        }
+        if (data.REQUIRED_DOCUMENTS_RETURNING) {
+          try { r = JSON.parse(data.REQUIRED_DOCUMENTS_RETURNING); } catch { }
+        }
+        setDynamicReqs({ new: n as DocumentType[], ret: r as DocumentType[] });
+      })
+      .catch(e => console.error("Error fetching doc config:", e));
+  }, []);
 
   // @ts-ignore
   const token = session?.accessToken || session?.user?.accessToken;
 
-  const getDocumentByType = (type: DocumentType) => 
+  const getDocumentByType = (type: DocumentType) =>
     documents.find(doc => doc.documentType === type);
 
   const handleFileSelect = async (type: DocumentType, file: File) => {
@@ -99,11 +125,19 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
     }
   };
 
-  const completedCount = REQUIRED_DOCUMENTS.filter(
+  const requiredTypes = dynamicReqs
+    ? (enrollmentType === 'RETURNING_STUDENT' ? dynamicReqs.ret : dynamicReqs.new)
+    : (enrollmentType === 'RETURNING_STUDENT'
+      ? ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO']
+      : ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL']);
+
+  const requiredDocuments = ALL_DOCUMENTS.filter(doc => requiredTypes.includes(doc.type as any));
+
+  const completedCount = requiredDocuments.filter(
     req => documents.some(doc => doc.documentType === req.type)
   ).length;
 
-  const progress = (completedCount / REQUIRED_DOCUMENTS.length) * 100;
+  const progress = (completedCount / requiredDocuments.length) * 100;
 
   return (
     <div className="space-y-6">
@@ -112,7 +146,7 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
         <div className="flex justify-between text-sm">
           <span>Progreso de documentos</span>
           <span className="text-muted-foreground">
-            {completedCount} de {REQUIRED_DOCUMENTS.length} completados
+            {completedCount} de {requiredDocuments.length} completados
           </span>
         </div>
         <Progress value={progress} className="h-2" />
@@ -120,12 +154,12 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
 
       {/* Lista de documentos */}
       <div className="space-y-4">
-        {REQUIRED_DOCUMENTS.map(({ type, accept }) => {
+        {requiredDocuments.map(({ type, accept }) => {
           const existingDoc = getDocumentByType(type);
           const isUploading = uploading === type;
 
           return (
-            <Card 
+            <Card
               key={type}
               className={cn(
                 "transition-colors",
@@ -138,12 +172,11 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
                     {/* Icono o Preview */}
                     {type === 'STUDENT_PHOTO' && existingDoc ? (
                       <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-green-200 relative bg-gray-100 shrink-0">
-                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                         <img 
-                           src={`${process.env.NEXT_PUBLIC_API_URL}${existingDoc.fileUrl}`} 
-                           alt="Foto del estudiante"
-                           className="h-full w-full object-cover"
-                         />
+                        <img
+                          src={getFileUrl(existingDoc.fileUrl)}
+                          alt="Foto del estudiante"
+                          className="h-full w-full object-cover"
+                        />
                       </div>
                     ) : (
                       existingDoc ? (
@@ -156,7 +189,7 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
                         </div>
                       )
                     )}
-                    
+
                     <div>
                       <p className="font-medium">{DOCUMENT_LABELS[type]}</p>
                       {existingDoc ? (
@@ -165,10 +198,10 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
                         </p>
                       ) : (
                         <div className="flex flex-col">
-                           <p className="text-sm text-orange-600">Pendiente</p>
-                           {type === 'STUDENT_PHOTO' && (
-                             <p className="text-xs text-muted-foreground">Formato JPG/PNG, fondo blanco, rostro despejado.</p>
-                           )}
+                          <p className="text-sm text-orange-600">Pendiente</p>
+                          {type === 'STUDENT_PHOTO' && (
+                            <p className="text-xs text-muted-foreground">Formato JPG/PNG, fondo blanco, rostro despejado.</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -180,11 +213,9 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.open(
-                            `${process.env.NEXT_PUBLIC_API_URL}${existingDoc.fileUrl}`,
-                            '_blank'
-                          )}
-                        >
+                          onClick={() => {
+                            window.open(getFileUrl(existingDoc.fileUrl), '_blank');
+                          }}>
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
@@ -245,7 +276,7 @@ export function DocumentsForm({ applicationId, documents: initialDocuments }: Do
       {/* Nota informativa */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <p className="text-sm text-blue-800">
-          <strong>Nota:</strong> Todos los documentos son obligatorios para enviar la solicitud. 
+          <strong>Nota:</strong> Todos los documentos son obligatorios para enviar la solicitud.
           Formatos aceptados: PDF, JPG, PNG. Tamaño máximo: 5MB por archivo.
         </p>
       </div>

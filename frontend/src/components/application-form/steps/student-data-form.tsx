@@ -18,6 +18,13 @@ interface StudentDataFormProps {
   onChange: (data: Partial<Application>) => void;
 }
 
+function getFileUrl(url?: string | null) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
+  return `${baseUrl}/${url.replace(/^\/+/, '')}`;
+}
+
 export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
   const { data: session } = useSession();
   const [searching, setSearching] = useState(false);
@@ -43,18 +50,29 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
       setSearching(true);
       const result = await searchByCedula(cedula, token);
 
-      if (result) {
+      if (result && result.found) {
+        const { studentData, familyData, enrollmentType } = result;
+
         onChange({
-          studentFirstName: result.firstName || '',
-          studentLastName: result.lastName || '',
-          studentGender: result.gender as Gender,
-          studentBirthDate: result.birthDate ? new Date(result.birthDate).toISOString() : undefined,
-          studentNationality: result.nationality || 'ECUATORIANA',
-          studentAddress: result.address || '',
+          enrollmentType: enrollmentType || 'RETURNING_STUDENT',
+          studentFirstName: studentData.firstName || '',
+          studentLastName: studentData.lastName || '',
+          studentGender: studentData.gender as Gender,
+          studentBirthDate: studentData.birthDate ? new Date(studentData.birthDate).toISOString() : undefined,
+          studentNationality: studentData.nationality || 'ECUATORIANA',
+          studentAddress: studentData.address || '',
+          studentEmail: studentData.email || '',
+          studentPhone: studentData.phone || '',
+          bloodType: studentData.bloodType || '',
+          previousSchool: studentData.previousSchool || '',
+          fatherData: familyData?.father || undefined,
+          motherData: familyData?.mother || undefined,
+          representativeData: familyData?.representative || undefined,
+          studentPhotoUrl: result.studentPhotoUrl || undefined,
         });
-        toast.success('Datos encontrados y completados');
+        toast.success('Información de estudiante antiguo recuperada correctamente');
       } else {
-        toast.warning('No se encontraron datos para esta cédula');
+        toast.warning('No se encontraron registros previos para esta cédula');
       }
     } catch (error) {
       console.error(error);
@@ -103,7 +121,17 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
 
       {/* Datos Personales */}
       <div>
-        <h3 className="text-lg font-medium mb-4">Datos Personales</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium">Datos Personales</h3>
+          {data.studentPhotoUrl && (
+            <div className="flex items-center gap-3 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+              <div className="h-10 w-10 rounded-full overflow-hidden border border-green-200">
+                <img src={getFileUrl(data.studentPhotoUrl)} alt="Preview" className="h-full w-full object-cover" />
+              </div>
+              <span className="text-xs font-medium text-green-700">Foto cargada de archivo</span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="studentFirstName">Nombres *</Label>

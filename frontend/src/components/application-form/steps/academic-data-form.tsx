@@ -33,6 +33,37 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
   const token = session?.accessToken || session?.user?.accessToken;
   const [quotaInfo, setQuotaInfo] = useState<{ status: string; available: number; requiresCursillo?: boolean } | null>(null);
 
+  const [formGrades, setFormGrades] = useState<any[]>(GRADE_LEVELS);
+  const [formSpecialties, setFormSpecialties] = useState<any[]>([
+    { value: 'CIENCIAS', label: 'BGU Ciencias', afternoonOnly: false },
+    { value: 'TECNICO_INFORMATICA', label: 'BT Informática', afternoonOnly: true }
+  ]);
+  const [bguGrades, setBguGrades] = useState<string[]>(BGU_GRADES);
+  const [cursilloGrades, setCursilloGrades] = useState<string[]>(CURSILLO_GRADES);
+
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public-config`);
+        if (res.ok) {
+          const configRaw = await res.json();
+          if (configRaw.FORM_GRADES) {
+            const grades = JSON.parse(configRaw.FORM_GRADES);
+            setFormGrades(grades);
+            setBguGrades(grades.filter((g: any) => g.isBGU).map((g: any) => g.value));
+            setCursilloGrades(grades.filter((g: any) => g.requiresCursillo).map((g: any) => g.value));
+          }
+          if (configRaw.FORM_SPECIALTIES) {
+            setFormSpecialties(JSON.parse(configRaw.FORM_SPECIALTIES));
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load dynamic form config', error);
+      }
+    }
+    fetchConfig();
+  }, []);
+
   useEffect(() => {
     async function checkQuota() {
       if (!data.gradeLevel || !data.shift || !token) {
@@ -53,9 +84,9 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
     onChange({ [field]: value });
   };
 
-  const isBGU = BGU_GRADES.includes(data.gradeLevel || '');
+  const isBGU = bguGrades.includes(data.gradeLevel || '');
   // El cursillo aplica únicamente si el grado lo requiere Y la escuela NO es la UEFDB
-  const gradeRequiresCursillo = CURSILLO_GRADES.includes(data.gradeLevel || '');
+  const gradeRequiresCursillo = cursilloGrades.includes(data.gradeLevel || '');
   const comesFromOtherSchool = !isUEFDB(data.previousSchool);
   const needsCursillo = quotaInfo?.requiresCursillo ?? false;
 
@@ -130,7 +161,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
             <Select
               value={data.gradeLevel || ''}
               onValueChange={(value) => {
-                const isBGUValue = BGU_GRADES.includes(value);
+                const isBGUValue = bguGrades.includes(value);
                 handleChange('gradeLevel', value);
                 if (!isBGUValue) {
                   handleChange('specialty', undefined);
@@ -141,7 +172,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 <SelectValue placeholder="Seleccionar grado" />
               </SelectTrigger>
               <SelectContent>
-                {GRADE_LEVELS.map((grade) => (
+                {formGrades.map((grade) => (
                   <SelectItem key={grade.value} value={grade.value}>
                     {grade.label}
                   </SelectItem>
@@ -167,8 +198,11 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                   <SelectValue placeholder="Seleccionar especialidad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CIENCIAS">BGU Ciencias</SelectItem>
-                  <SelectItem value="TECNICO_INFORMATICA">BT Informática</SelectItem>
+                  {formSpecialties.map((spec) => (
+                    <SelectItem key={spec.value} value={spec.value}>
+                      {spec.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -207,10 +241,9 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 }`}
               >
                 <span className="font-medium">
-                  {quotaInfo.status === 'AVAILABLE' ? 'Cupos Disponibles' :
-                    quotaInfo.status === 'LIMITED' ? 'Cupos Limitados' : 'Cupos Agotados'}
+                  {quotaInfo.status === 'AVAILABLE' ? 'Vacantes Disponibles' :
+                    quotaInfo.status === 'LIMITED' ? 'Pocas Vacantes Disponibles' : 'Cupos Agotados'}
                 </span>
-                <span>{quotaInfo.available} disponibles</span>
               </div>
             )}
 

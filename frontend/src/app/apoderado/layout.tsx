@@ -99,6 +99,7 @@ export default function ApoderadoLayout({
                 <div className="flex flex-col space-y-1 p-2">
                   <p className="text-sm font-medium">{session?.user?.name}</p>
                   <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                  <p className="text-xs font-semibold text-primary mt-1">Apoderado / Representante</p>
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>

@@ -264,7 +264,7 @@ export function ApplicationForm({ applicationId }: ApplicationFormProps) {
             <FamilyDataForm data={formData} onChange={updateFormData} />
           )}
           {currentStep === 3 && application && (
-            <DocumentsForm applicationId={application.id} documents={application.documents || []} />
+            <DocumentsForm applicationId={application.id} documents={application.documents || []} enrollmentType={formData.enrollmentType} />
           )}
         </CardContent>
       </Card>
