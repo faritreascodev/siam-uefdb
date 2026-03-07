@@ -168,11 +168,16 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
       : `<div style="width:56px;height:56px;background:#1e40af;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:10px;">UEFDB</div>`;
 
     const photoDoc = app.documents?.find((d: any) => d.documentType === 'STUDENT_PHOTO');
-    const photoSrc = photoDoc
-      ? (photoDoc.fileUrl.startsWith('http')
-        ? photoDoc.fileUrl
-        : `http://localhost:${process.env.PORT || 4000}${photoDoc.fileUrl}`)
-      : null;
+    let photoSrc = null;
+    if (photoDoc) {
+      if (photoDoc.fileUrl.startsWith('http')) {
+        photoSrc = photoDoc.fileUrl;
+      } else {
+        const port = process.env.PORT || 4000;
+        photoSrc = `http://127.0.0.1:${port}/${photoDoc.fileUrl.replace(/^\/+/, '')}`;
+      }
+    }
+
     const photoTag = photoSrc
       ? `<img src="${photoSrc}" style="width:90px;height:110px;object-fit:cover;border:2px solid #e5e7eb;border-radius:4px;" />`
       : `<div style="width:90px;height:110px;border:2px dashed #d1d5db;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:10px;text-align:center;">FOTO<br>ESTUDIANTE</div>`;
@@ -325,3 +330,5 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
 </html>`;
   }
 }
+
+

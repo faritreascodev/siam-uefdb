@@ -30,10 +30,10 @@ export class RegisterDto {
   lastName?: string;
 
   // New fields for MVP Auth
-  @ApiProperty({ example: '0999999999', description: 'Ecuadorian ID Card (Cédula)' })
-  @IsNotEmpty()
+  @ApiProperty({ example: '0999999999', description: 'Ecuadorian ID Card (Cédula)', required: false })
+  @IsOptional()
   @IsString()
-  cedula: string;
+  cedula?: string;
 
   @ApiPropertyOptional({ example: '0987654321', description: 'Mobile phone number' })
   @IsOptional()
@@ -45,10 +45,10 @@ export class RegisterDto {
   @IsString()
   direccion?: string;
 
-  @ApiPropertyOptional({ 
-    enum: Parentesco, 
-    example: Parentesco.PADRE, 
-    description: 'Relationship to the student' 
+  @ApiPropertyOptional({
+    enum: Parentesco,
+    example: Parentesco.PADRE,
+    description: 'Relationship to the student'
   })
   @IsOptional()
   @IsEnum(Parentesco)
@@ -59,3 +59,5 @@ export class RegisterDto {
   @IsArray()
   roles?: string[];
 }
+
+

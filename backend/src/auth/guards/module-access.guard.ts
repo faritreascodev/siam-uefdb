@@ -32,7 +32,7 @@ export class ModuleAccessGuard implements CanActivate {
             return true;
         }
 
-        if (userRoles.includes('secretary')) {
+        if (userRoles.includes('secretaria')) {
             const config = await this.prisma.systemConfig.findUnique({
                 where: { key: 'SECRETARY_MODULES' }
             });
@@ -54,3 +54,5 @@ export class ModuleAccessGuard implements CanActivate {
         return true;
     }
 }
+
+

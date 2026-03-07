@@ -16,7 +16,7 @@ export class AuditController {
     constructor(private readonly auditService: AuditService) { }
 
     @Get()
-    @Roles('superadmin', 'admin', 'secretary')
+    @Roles('superadmin', 'admin', 'secretaria')
     @ApiOperation({ summary: 'Get all audit logs' })
     findAll(
         @Query('action') action?: string,
@@ -38,3 +38,5 @@ export class AuditController {
         });
     }
 }
+
+

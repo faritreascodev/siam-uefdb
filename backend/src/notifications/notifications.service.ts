@@ -48,6 +48,7 @@ export class NotificationsService {
     type: NotificationType;
     message: string;
     applicationId?: string;
+    actionUrl?: string;
     priority?: NotificationPriority;
   }) {
     return this.prisma.notification.create({
@@ -58,6 +59,7 @@ export class NotificationsService {
         title: this.getTitleForType(data.type),
         message: data.message,
         applicationId: data.applicationId,
+        actionUrl: data.actionUrl,
       },
     });
   }
@@ -84,11 +86,14 @@ export class NotificationsService {
       PAYMENT_REJECTED: `El pago para la solicitud de ${studentName} ha sido rechazado${additionalInfo ? `: ${additionalInfo}` : ''}.`,
     };
 
+    const actionUrl = applicationId ? `/admin/admisiones/${applicationId}` : undefined;
+
     return this.create({
       userId,
       type,
       message: messages[type] || 'Nueva notificación',
       applicationId,
+      actionUrl: type === 'APPLICATION_SUBMITTED' ? `/admin/admisiones/${applicationId}` : (userId ? `/apoderado/solicitudes/${applicationId}` : actionUrl),
     });
   }
 
@@ -148,6 +153,7 @@ export class NotificationsService {
     type: NotificationType;
     message: string;
     applicationId?: string;
+    actionUrl?: string;
     priority?: NotificationPriority;
   }) {
     const users = await this.prisma.user.findMany({
@@ -168,6 +174,7 @@ export class NotificationsService {
       title: `[${roleName.toUpperCase()}] ` + this.getTitleForType(data.type),
       message: data.message,
       applicationId: data.applicationId,
+      actionUrl: data.actionUrl || (data.applicationId ? `/admin/admisiones/${data.applicationId}` : undefined),
     }));
 
     if (notifications.length > 0) {
@@ -212,7 +219,7 @@ export class NotificationsService {
 
   // Notificar a secretarios y admins sobre pago cargado
   async notifyAdminStaffPaymentUploaded(applicationId: string, studentName: string) {
-    for (const role of ['secretary', 'admin', 'superadmin']) {
+    for (const role of ['secretaria', 'admin', 'superadmin']) {
       await this.notifyRole(role, {
         type: 'DOCUMENT_REQUIRED' as NotificationType,
         priority: 'HIGH',
@@ -229,9 +236,11 @@ export class NotificationsService {
     applicationId?: string;
     priority?: NotificationPriority;
   }) {
-    for (const role of ['admin', 'superadmin', 'secretary']) {
+    for (const role of ['admin', 'superadmin', 'secretaria']) {
       await this.notifyRole(role, data);
     }
   }
 }
+
+
 

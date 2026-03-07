@@ -13,11 +13,11 @@ export class SecretaryManageUsersGuard implements CanActivate {
 
         const roles = user.roles?.map((r: any) => (typeof r === 'string' ? r : r.name || '').toLowerCase()) || [];
 
-        if (roles.includes('admin') || roles.includes('superadmin') || roles.includes('principal') || roles.includes('directivo')) {
+        if (roles.includes('admin') || roles.includes('superadmin') || roles.includes('rector') || roles.includes('directivo')) {
             return true;
         }
 
-        if (roles.includes('secretary')) {
+        if (roles.includes('secretaria')) {
             const config = await this.prisma.systemConfig.findUnique({ where: { key: 'SECRETARY_MANAGE_USERS' } });
             if (config?.value === 'true') {
                 return true;
@@ -28,3 +28,5 @@ export class SecretaryManageUsersGuard implements CanActivate {
         throw new ForbiddenException('No tienes los permisos necesarios para realizar esta acción.');
     }
 }
+
+

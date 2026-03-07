@@ -11,17 +11,17 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async register(registerDto: RegisterDto) {
     const { email, password, firstName, lastName, cedula, telefono, direccion, parentesco } = registerDto;
 
-    // 1. Validar existencia de usuario (Email o Cédula)
+    // 1. Validar existencia de usuario (Email obligatorio, Cédula solo si se proporciona)
     const existingUser = await this.prisma.user.findFirst({
       where: {
         OR: [
           { email },
-          { cedula },
+          ...(cedula ? [{ cedula }] : []),
         ],
       },
     });
@@ -30,13 +30,13 @@ export class AuthService {
       if (existingUser.email === email) {
         throw new ConflictException('Email already in use');
       }
-      if (existingUser.cedula === cedula) {
+      if (cedula && existingUser.cedula === cedula) {
         throw new ConflictException('Cedula already registered');
       }
     }
 
-    // 2. Validar Cédula Ecuatoriana
-    if (!validateCedulaEcuatoriana(cedula)) {
+    // 2. Validar Cédula Ecuatoriana (Solo si se proporciona)
+    if (cedula && !validateCedulaEcuatoriana(cedula)) {
       throw new BadRequestException('Invalid Ecuadorian ID (Cédula)');
     }
 
@@ -54,7 +54,7 @@ export class AuthService {
         telefono,
         direccion,
         parentesco,
-        status: 'PENDIENTE_APROBACION', 
+        status: 'PENDIENTE_APROBACION',
         isActive: false, // Legacy field sync
       },
     });
@@ -106,7 +106,7 @@ export class AuthService {
     if (user.status === 'PENDIENTE_APROBACION') {
       throw new UnauthorizedException('Usuario pendiente de aprobación. Comuníquese con la administración.');
     }
-    
+
     if (user.status === 'BLOQUEADO' || user.status === 'RECHAZADO') {
       throw new UnauthorizedException('Account blocked or rejected.');
     }
@@ -137,7 +137,7 @@ export class AuthService {
         ...userWithoutPassword,
         roles: roleNames,
       },
-      mustChangePassword: user.mustChangePassword, 
+      mustChangePassword: user.mustChangePassword,
     };
   }
 
@@ -208,19 +208,21 @@ export class AuthService {
     };
   }
 
-  async changePasswordFirstTime(userId: string, changePasswordDto: any) { 
-     const { newPassword } = changePasswordDto;
-     
-     const hashedPassword = await bcrypt.hash(newPassword, 10);
-     
-     await this.prisma.user.update({
-       where: { id: userId },
-       data: {
-         password: hashedPassword,
-         mustChangePassword: false,
-       },
-     });
+  async changePasswordFirstTime(userId: string, changePasswordDto: any) {
+    const { newPassword } = changePasswordDto;
 
-     return { message: 'Password updated successfully' };
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+    });
+
+    return { message: 'Password updated successfully' };
   }
 }
+
+

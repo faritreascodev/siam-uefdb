@@ -66,3 +66,5 @@ export class AuthController {
     return { message: 'This endpoint is only for superadmins' };
   }
 }
+
+

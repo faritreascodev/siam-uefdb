@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res, UseGuards, NotFoundException, ForbiddenException, Req } from '@nestjs/common';
+import { Controller, Get, Param, Res, UseGuards, Req, Query } from '@nestjs/common';
 import { Response } from 'express';
 import { PdfService } from './services/pdf.service';
 import { ApplicationsService } from '../applications/applications.service';
@@ -7,7 +7,6 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { ModuleAccessGuard } from '../auth/guards/module-access.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ModuleAccess } from '../auth/decorators/module-access.decorator';
-
 import { ReportsService } from './reports.service';
 
 @Controller('reports')
@@ -21,21 +20,30 @@ export class ReportsController {
   ) { }
 
   @Get('stats/dashboard')
-  @Roles('admin', 'directivo', 'secretary') // allowing secretary just in case they are granted 'reportes' module
+  @Roles('admin', 'rector', 'secretaria', 'superadmin')
   @ModuleAccess('dashboard')
-  async getDashboardStats() {
-    return this.reportsService.getDashboardStats();
+  async getDashboardStats(
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    return this.reportsService.getDashboardStats(startDate, endDate);
+  }
+
+  @Get('daily-summary')
+  @Roles('admin', 'rector', 'secretaria', 'superadmin', 'directivo')
+  getDailySummary() {
+    return this.reportsService.getDailySummary();
   }
 
   @Get('stats/levels')
-  @Roles('admin', 'directivo', 'secretary')
+  @Roles('admin', 'rector', 'secretaria', 'superadmin')
   @ModuleAccess('dashboard')
   async getStatsByLevel() {
     return this.reportsService.getStatsByLevel();
   }
 
   @Get('application/:id/pdf')
-  @Roles('admin', 'secretary', 'directivo', 'user', 'apoderado')
+  @Roles('admin', 'secretaria', 'rector', 'superadmin', 'apoderado')
   @ModuleAccess('')
   async downloadApplicationPdf(
     @Param('id') id: string,
@@ -45,13 +53,9 @@ export class ReportsController {
     const userId = req.user.id;
     const userRoles = req.user.roles || [];
 
-    // Fetch application directly from Prisma via service (we might need a method that doesn't check owner if admin)
-    // For now, let's use findOne and handle permissions manually or reuse existing service methods
-    // If user is admin/secretary/directivo, access is allowed. If 'user', must be owner.
-
     let application;
     try {
-      const hasPrivilegedRole = userRoles.some(role => ['admin', 'secretary', 'directivo'].includes(role));
+      const hasPrivilegedRole = userRoles.some(role => ['admin', 'secretaria', 'rector', 'superadmin'].includes(role));
 
       if (hasPrivilegedRole) {
         application = await this.applicationsService.findOne(id);

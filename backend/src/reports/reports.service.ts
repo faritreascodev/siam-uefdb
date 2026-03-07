@@ -3,35 +3,110 @@ import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
-  async getDashboardStats() {
-    const totalApplications = await this.prisma.application.count();
+  async getDashboardStats(startDate?: string, endDate?: string) {
+    const where: any = {};
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setDate(end.getDate() + 1);
+        where.createdAt.lt = end;
+      }
+    }
+
+    const totalApplications = await this.prisma.application.count({ where });
 
     const pendingReview = await this.prisma.application.count({
-      where: { status: 'SUBMITTED' },
+      where: { ...where, status: 'SUBMITTED' },
     });
 
     const approved = await this.prisma.application.count({
-      where: { 
-        status: { in: ['APPROVED', 'CURSILLO_APPROVED'] } 
+      where: {
+        ...where,
+        status: { in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'] }
       },
     });
 
     const rejected = await this.prisma.application.count({
-      where: { status: 'REJECTED' },
+      where: { ...where, status: { in: ['REJECTED', 'CURSILLO_REJECTED'] } },
     });
 
-    const approvalRate = totalApplications > 0 
-      ? Math.round((approved / totalApplications) * 100) 
-      : 0;
+    const matriculated = await this.prisma.application.count({
+      where: { ...where, status: 'MATRICULATED' },
+    });
 
     return {
       totalApplications,
       pendingReview,
       approved,
       rejected,
-      approvalRate,
+      matriculated
+    };
+  }
+
+  async getDailySummary() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const nextDay = new Date(today);
+    nextDay.setDate(today.getDate() + 1);
+
+    const [newApplications, approved, rejected, pendingReview, paymentsRegistered, matriculated, cursilloEnrolled] = await Promise.all([
+      // Nuevas del día (creadas hoy y que están pendientes)
+      this.prisma.application.count({
+        where: { createdAt: { gte: today, lt: nextDay } }
+      }),
+      // Aprobadas hoy
+      this.prisma.application.count({
+        where: {
+          status: 'APPROVED',
+          updatedAt: { gte: today, lt: nextDay } // asumiendo updatedAt como proxy de fecha de aprobación por simplicidad
+        }
+      }),
+      // Rechazadas hoy
+      this.prisma.application.count({
+        where: {
+          status: 'REJECTED',
+          updatedAt: { gte: today, lt: nextDay }
+        }
+      }),
+      // Pendientes (histórico total pendiente)
+      this.prisma.application.count({ where: { status: 'UNDER_REVIEW' } }),
+      // Pagos registrados hoy
+      this.prisma.application.count({
+        where: {
+          paymentDate: { not: null },
+          updatedAt: { gte: today, lt: nextDay }
+        }
+      }),
+      // Matriculados hoy
+      this.prisma.application.count({
+        where: {
+          status: 'MATRICULATED',
+          updatedAt: { gte: today, lt: nextDay }
+        }
+      }),
+      // Asignados a cursillo hoy
+      this.prisma.application.count({
+        where: {
+          status: 'CURSILLO_SCHEDULED',
+          updatedAt: { gte: today, lt: nextDay }
+        }
+      })
+    ]);
+
+    return {
+      date: today.toISOString().split('T')[0],
+      newApplications,
+      approved,
+      rejected,
+      pendingReview,
+      paymentsRegistered,
+      matriculated,
+      cursilloEnrolled
     };
   }
 
@@ -42,7 +117,7 @@ export class ReportsService {
     // 2. We want to aggregate statistics per "Configuration Group"
     // Usually, statistics are better viewed by Level + Shift + Specialty (ignoring parallel for a summary, or including it for detail)
     // The requirement says: "Nivel educativo, Jornada, Especialidad, Total solicitudes, Aprobadas, Rechazadas, Cupos ocupados, Cupos disponibles"
-    
+
     // Let's Group Applications by level, shift, specialty
     const applications = await this.prisma.application.findMany({
       select: {
@@ -88,47 +163,48 @@ export class ReportsService {
     };
 
     const mapShift = (shift: string | null) => {
-      if (shift === 'MORNING') return 'Matutina';
-      if (shift === 'AFTERNOON') return 'Vespertina';
-      return shift || 'Desconocido';
+      return shift === 'MORNING' ? 'Matutina' : shift === 'AFTERNOON' ? 'Vespertina' : 'Sin jornada';
     };
 
     const mapSpecialty = (sp: string | null) => {
-      if (sp === 'CIENCIAS') return 'Ciencias';
-      if (sp === 'TECNICO_INFORMATICA') return 'Técnico Informática';
+      if (!sp || sp === 'none') return 'none';
+      const s = sp.toUpperCase();
+      if (s.includes('CIENCIAS')) return 'BGU Ciencias';
+      if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA')) return 'BT Informática';
       return sp;
     };
 
     // Initialize map with unique keys from applications (or quotas potentially, but quotas might have 0 apps)
     // Let's iterate applications first to count reality
     applications.forEach(app => {
-        const mappedLevel = mapLevel(app.gradeLevel || 'Desconocido');
-        const mappedShift = mapShift(app.shift);
-        const mappedSpecialty = mapSpecialty(app.specialty);
-        const key = `${mappedLevel}-${mappedShift}-${mappedSpecialty || 'none'}`;
-        
-        if (!statsMap.has(key)) {
-            statsMap.set(key, {
-                level: mappedLevel,
-                shift: mappedShift,
-                specialty: mappedSpecialty,
-                totalApplications: 0,
-                approved: 0,
-                rejected: 0,
-                pending: 0,
-            });
-        }
+      const mappedLevel = mapLevel(app.gradeLevel || 'Sin nivel');
+      if (!app.gradeLevel) return; // omitir registros sin nivel
+      const mappedShift = mapShift(app.shift);
+      const mappedSpecialty = mapSpecialty(app.specialty);
+      const key = `${mappedLevel}-${mappedShift}-${mappedSpecialty}`;
 
-        const entry = statsMap.get(key)!;
-        entry.totalApplications++;
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          level: mappedLevel,
+          shift: mappedShift,
+          specialty: mappedSpecialty === 'none' ? null : mappedSpecialty,
+          totalApplications: 0,
+          approved: 0,
+          rejected: 0,
+          pending: 0,
+        });
+      }
 
-        if (['APPROVED', 'CURSILLO_APPROVED'].includes(app.status)) {
-            entry.approved++;
-        } else if (app.status === 'REJECTED') {
-            entry.rejected++;
-        } else {
-            entry.pending++;
-        }
+      const entry = statsMap.get(key)!;
+      entry.totalApplications++;
+
+      if (['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'].includes(app.status)) {
+        entry.approved++;
+      } else if (app.status === 'REJECTED' || app.status === 'CURSILLO_REJECTED') {
+        entry.rejected++;
+      } else {
+        entry.pending++;
+      }
     });
 
     // 4. Calculate Quotas (Occupied vs Available)
@@ -136,54 +212,57 @@ export class ReportsService {
     const quotaMap = new Map<string, number>();
 
     quotas.forEach(q => {
-        const key = `${q.level}-${q.shift}-${q.specialty || 'none'}`;
-        const currentTotal = quotaMap.get(key) || 0;
-        quotaMap.set(key, currentTotal + q.totalQuota);
+      const mappedLevel = mapLevel(q.level);
+      const key = `${mappedLevel}-${q.shift}-${mapSpecialty(q.specialty)}`;
+      const currentTotal = quotaMap.get(key) || 0;
+      quotaMap.set(key, currentTotal + q.totalQuota);
     });
 
     // 5. Merge results
     const results = [];
-    
+
     // We should include levels that exist in Quotas even if they have 0 applications
     const allKeys = new Set([...statsMap.keys(), ...quotaMap.keys()]);
 
     allKeys.forEach(key => {
-        const stats = statsMap.get(key) || {
-            level: '', // Will be filled below if missing
-            shift: '',
-            specialty: null,
-            totalApplications: 0,
-            approved: 0,
-            rejected: 0,
-            pending: 0,
-        };
+      const stats = statsMap.get(key) || {
+        level: '', // Will be filled below if missing
+        shift: '',
+        specialty: null,
+        totalApplications: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+      };
 
-        // If stats was missing (0 apps), we need to extract info from key or quota
-        if (!stats.level) {
-             const parts = key.split('-');
-             // Use matching quota to get proper casing if possible, otherwise parts
-             const q = quotas.find(q => `${q.level}-${q.shift}-${q.specialty || 'none'}` === key);
-             if (q) {
-                 stats.level = q.level;
-                 stats.shift = q.shift;
-                 stats.specialty = q.specialty;
-             }
+      // If stats was missing (0 apps), we need to extract info from key or quota
+      if (!stats.level) {
+        const parts = key.split('-');
+        // Use matching quota to get proper casing if possible, otherwise parts
+        const q = quotas.find(q => `${q.level}-${q.shift}-${q.specialty || 'none'}` === key);
+        if (q) {
+          stats.level = q.level;
+          stats.shift = q.shift;
+          stats.specialty = q.specialty;
         }
+      }
 
-        const totalQuota = quotaMap.get(key) || 0;
-        // Occupied slots are basically the approved applications + specifically reserved spots if any (but here we count approved apps)
-        // Note: In strict quota logic, we might count 'ASSIGNED' parallel apps, but for general stats, 'APPROVED' is the key.
-        const occupied = stats.approved; 
-        const available = Math.max(0, totalQuota - occupied);
+      const totalQuota = quotaMap.get(key) || 0;
+      // Occupied slots are basically the approved applications + specifically reserved spots if any (but here we count approved apps)
+      // Note: In strict quota logic, we might count 'ASSIGNED' parallel apps, but for general stats, 'APPROVED' is the key.
+      const occupied = stats.approved;
+      const available = Math.max(0, totalQuota - occupied);
 
-        results.push({
-            ...stats,
-            totalQuota,
-            occupied,
-            available
-        });
+      results.push({
+        ...stats,
+        totalQuota,
+        occupied,
+        available
+      });
     });
 
     return results.sort((a, b) => a.level.localeCompare(b.level));
   }
 }
+
+
