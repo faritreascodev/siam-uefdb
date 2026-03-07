@@ -31,7 +31,7 @@ export class CursilloController {
     // ============ ESTADÍSTICAS ============
 
     @Get('stats')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Estadísticas globales del cursillo' })
     getStats(@Query('academicYear') academicYear?: string) {
         return this.cursilloService.getStats(academicYear);
@@ -40,28 +40,28 @@ export class CursilloController {
     // ============ SESIONES ============
 
     @Get('sessions')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Listar todas las sesiones del cursillo' })
     getAllSessions(@Query('academicYear') academicYear?: string) {
         return this.cursilloService.getAllSessions(academicYear);
     }
 
     @Get('sessions/:id')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Ver detalle de una sesión del cursillo' })
     getSession(@Param('id') id: string) {
         return this.cursilloService.getSession(id);
     }
 
     @Post('sessions')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Crear nueva sesión de cursillo' })
     createSession(@Body() dto: CreateCursilloSessionDto) {
         return this.cursilloService.createSession(dto);
     }
 
     @Patch('sessions/:id')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Actualizar sesión de cursillo' })
     updateSession(@Param('id') id: string, @Body() dto: UpdateCursilloSessionDto) {
         return this.cursilloService.updateSession(id, dto);
@@ -73,7 +73,7 @@ export class CursilloController {
      * Inscribir a un estudiante en las materias que le corresponden según grado/especialidad.
      */
     @Post('applications/:applicationId/enroll')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Inscribir solicitud en el cursillo' })
     enrollApplication(
         @Param('applicationId') applicationId: string,
@@ -86,7 +86,7 @@ export class CursilloController {
      * Ver inscripciones de una solicitud — solo para personal administrativo.
      */
     @Get('applications/:applicationId/enrollments')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Ver inscripciones de cursillo de una solicitud (admin)' })
     getApplicationEnrollments(@Param('applicationId') applicationId: string) {
         return this.cursilloService.getApplicationEnrollments(applicationId);
@@ -97,7 +97,7 @@ export class CursilloController {
      * La validación de propiedad se realiza en el service.
      */
     @Get('applications/:applicationId/my-enrollments')
-    @Roles('apoderado', 'admin', 'superadmin', 'secretary', 'principal')
+    @Roles('apoderado', 'admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Ver inscripciones del cursillo de una solicitud propia (apoderado)' })
     @ApiResponse({ status: 200, description: 'Lista de inscripciones' })
     @ApiResponse({ status: 403, description: 'No autorizado — la solicitud no le pertenece' })
@@ -116,7 +116,7 @@ export class CursilloController {
      * Actualizar asistencia y nota de una inscripción
      */
     @Patch('enrollments/:enrollmentId')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Actualizar asistencia y nota de una inscripción' })
     updateEnrollment(
         @Param('enrollmentId') enrollmentId: string,
@@ -129,7 +129,7 @@ export class CursilloController {
      * Calcular y registrar el resultado final del cursillo.
      */
     @Post('applications/:applicationId/finalize')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Finalizar cursillo y calcular resultado' })
     finalizeCursillo(@Param('applicationId') applicationId: string) {
         return this.cursilloService.computeAndSetFinalResult(applicationId);
@@ -139,7 +139,7 @@ export class CursilloController {
      * Eliminar solicitud reprobada y liberar el cupo.
      */
     @Delete('applications/:applicationId')
-    @Roles('admin', 'superadmin', 'secretary', 'principal')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
     @ApiOperation({ summary: 'Eliminar solicitud reprobada y liberar cupo' })
     removeApplication(
         @Param('applicationId') applicationId: string,
@@ -148,3 +148,5 @@ export class CursilloController {
         return this.cursilloService.removeApplication(applicationId, req.user.id);
     }
 }
+
+

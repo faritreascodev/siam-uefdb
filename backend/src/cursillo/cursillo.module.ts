@@ -10,3 +10,5 @@ import { PrismaModule } from '../prisma/prisma.module';
     exports: [CursilloService],
 })
 export class CursilloModule { }
+
+

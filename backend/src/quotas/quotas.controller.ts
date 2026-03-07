@@ -25,7 +25,7 @@ export class QuotasController {
   }
 
   @Get()
-  @Roles('superadmin', 'admin', 'secretary', 'principal')
+  @Roles('superadmin', 'admin', 'secretaria', 'rector')
   @ApiOperation({ summary: 'Get all quota configurations' })
   findAll() {
     return this.quotasService.findAll();
@@ -65,7 +65,7 @@ export class QuotasController {
   }
 
   @Get(':id')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @ApiOperation({ summary: 'Get a quota configuration by ID' })
   findOne(@Param('id') id: string) {
     return this.quotasService.findOne(id);
@@ -85,3 +85,5 @@ export class QuotasController {
     return this.quotasService.remove(id);
   }
 }
+
+

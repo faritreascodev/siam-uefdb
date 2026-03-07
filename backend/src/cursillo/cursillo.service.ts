@@ -14,7 +14,7 @@ export const CURSILLO_SUBJECTS = {
         { subject: 'Matemáticas', subjectCode: 'MATE_BGU', specialty: null },
         { subject: 'Física', subjectCode: 'FISICA', specialty: null },
         { subject: 'Química', subjectCode: 'QUIMICA', specialty: null },
-        { subject: 'Programación', subjectCode: 'PROGRAMACION', specialty: 'Técnico Informática' },
+        { subject: 'Programación', subjectCode: 'PROGRAMACION', specialty: 'TECNICO_INFORMATICA' },
     ],
     // Aliases del formato antiguo (retrocompatibilidad mientras migra)
     '8vo_basico': [
@@ -26,7 +26,7 @@ export const CURSILLO_SUBJECTS = {
         { subject: 'Matemáticas', subjectCode: 'MATE_BGU', specialty: null },
         { subject: 'Física', subjectCode: 'FISICA', specialty: null },
         { subject: 'Química', subjectCode: 'QUIMICA', specialty: null },
-        { subject: 'Programación', subjectCode: 'PROGRAMACION', specialty: 'Técnico Informática' },
+        { subject: 'Programación', subjectCode: 'PROGRAMACION', specialty: 'TECNICO_INFORMATICA' },
     ],
 };
 
@@ -236,7 +236,7 @@ export class CursilloService {
         requestingUserId: string,
         userRoles: string[],
     ) {
-        const adminRoles = ['admin', 'superadmin', 'secretary', 'principal'];
+        const adminRoles = ['admin', 'superadmin', 'secretaria', 'rector'];
         const isAdmin = userRoles.some(r => adminRoles.includes(r));
 
         if (!isAdmin) {
@@ -438,3 +438,5 @@ export class CursilloService {
         };
     }
 }
+
+

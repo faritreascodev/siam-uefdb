@@ -53,7 +53,8 @@ export class UsersController {
   // --- External Endpoints ---
 
   @Get()
-  @Roles('superadmin', 'admin', 'secretary', 'principal', 'directivo')
+  @Roles('superadmin', 'admin', 'secretaria', 'rector', 'directivo')
+  @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({
     summary: 'Get all users',
     description: 'Retrieve a list of all users. Can filter by role.'
@@ -76,7 +77,7 @@ export class UsersController {
   }
 
   @Post()
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Create new user' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
@@ -87,7 +88,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Update user' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -97,7 +98,7 @@ export class UsersController {
   }
 
   @Patch(':id/activate')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Activate user' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -107,7 +108,7 @@ export class UsersController {
   }
 
   @Patch(':id/deactivate')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Deactivate user' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -117,7 +118,7 @@ export class UsersController {
   }
 
   @Post(':id/reset-password')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Manually reset user password' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -127,7 +128,7 @@ export class UsersController {
   }
 
   @Post(':id/roles/:roleId')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Assign role to user' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -138,7 +139,7 @@ export class UsersController {
   }
 
   @Delete(':id/roles/:roleId')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Remove role from user' })
   @ApiParam({ name: 'id', description: 'User UUID' })
@@ -151,7 +152,7 @@ export class UsersController {
   // --- Admin Endpoints ---
 
   @Get('pending')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'List pending users' })
   @ApiResponse({ status: 200, description: 'List of pending approval users' })
@@ -160,7 +161,7 @@ export class UsersController {
   }
 
   @Patch(':id/approve')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Approve pending user' })
   @ApiResponse({ status: 200, description: 'User approved and apoderado role assigned' })
@@ -169,7 +170,7 @@ export class UsersController {
   }
 
   @Patch(':id/reject')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Reject pending user' })
   @ApiResponse({ status: 200, description: 'User rejected' })
@@ -178,7 +179,7 @@ export class UsersController {
   }
 
   @Patch('bulk/approve')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Approve multiple users' })
   bulkApprove(@Body('ids') ids: string[], @Request() req: any) {
@@ -186,7 +187,7 @@ export class UsersController {
   }
 
   @Patch('bulk/reject')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Reject multiple users' })
   bulkReject(@Body('ids') ids: string[], @Request() req: any, @Body('reason') reason?: string) {
@@ -194,7 +195,7 @@ export class UsersController {
   }
 
   @Get('password-recovery-requests')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'List pending password recovery requests' })
   @ApiResponse({ status: 200, description: 'List of recovery requests' })
@@ -203,7 +204,7 @@ export class UsersController {
   }
 
   @Patch('password-recovery-requests/:id/resolve')
-  @Roles('superadmin', 'admin', 'secretary')
+  @Roles('superadmin', 'admin', 'secretaria')
   @UseGuards(SecretaryManageUsersGuard)
   @ApiOperation({ summary: 'Resolve recovery request (Generate Temp Pass or Reject)' })
   @ApiBody({ schema: { type: 'object', properties: { action: { type: 'string', enum: ['APPROVE', 'REJECT'] } } } })
@@ -212,3 +213,5 @@ export class UsersController {
     return this.usersService.resolveRecoveryRequest(id, action);
   }
 }
+
+

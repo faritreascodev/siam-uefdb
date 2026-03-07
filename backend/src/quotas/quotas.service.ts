@@ -41,7 +41,7 @@ export class QuotasService {
     // We count both APPROVED and CURSILLO_APPROVED as "occupying" a spot
     const applications = await this.prisma.application.findMany({
       where: {
-        status: { in: ['APPROVED', 'CURSILLO_APPROVED'] },
+        status: { in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'] },
       },
       select: {
         gradeLevel: true,
@@ -198,7 +198,7 @@ export class QuotasService {
     // We count APPROVED and CURSILLO_APPROVED applications for this Grade-Shift-Specialty combination
     const usedQuotas = await this.prisma.application.count({
       where: {
-        status: { in: ['APPROVED', 'CURSILLO_APPROVED'] },
+        status: { in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'] },
         gradeLevel: gradeLevel,
         // Since Shift is an enum (MORNING/AFTERNOON) and frontend might send 'Matutina'/'Vespertina'
         // we need to be careful. However, Prisma Query for Enums usually expects the Enum Value.
@@ -246,3 +246,5 @@ export class QuotasService {
     return true;
   }
 }
+
+

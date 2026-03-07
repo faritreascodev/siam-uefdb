@@ -257,3 +257,5 @@ export class CreateApplicationDto {
 
 // DTO para actualizar (usa PartialType en el controlador)
 export class UpdateApplicationDto extends CreateApplicationDto { }
+
+

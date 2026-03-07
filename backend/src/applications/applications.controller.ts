@@ -10,6 +10,7 @@ import {
   Query,
   Request,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApplicationsService } from './applications.service';
 import { CreateApplicationDto, UpdateApplicationDto } from './dto/create-application.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,9 +20,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ModuleAccess } from '../auth/decorators/module-access.decorator';
 import { ApplicationStatus } from '@prisma/client';
 
+@ApiTags('applications')
 @Controller('applications')
 @UseGuards(JwtAuthGuard, RolesGuard, ModuleAccessGuard)
 @ModuleAccess('admisiones')
+@ApiBearerAuth('JWT-auth')
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) { }
 
@@ -30,6 +33,7 @@ export class ApplicationsController {
   // Crear nueva solicitud (borrador vacío)
   @Post()
   @ModuleAccess('')
+  @ApiOperation({ summary: 'Crear una nueva solicitud de admisión (borrador)' })
   create(@Request() req: any) {
     return this.applicationsService.create(req.user.id);
   }
@@ -69,12 +73,21 @@ export class ApplicationsController {
   // Verificar disponibilidad de cupos
   @Get('check-quota')
   @ModuleAccess('')
+  @ApiOperation({ summary: 'Verificar disponibilidad de cupos por nivel y jornada' })
   checkQuota(
     @Query('gradeLevel') gradeLevel: string,
     @Query('shift') shift: string,
     @Query('previousSchool') previousSchool?: string
   ) {
     return this.applicationsService.checkQuota(gradeLevel, shift, previousSchool);
+  }
+
+  // Buscar estudiante por cédula (para autocompletado/continuidad)
+  @Get('search-cedula/:cedula')
+  @ModuleAccess('')
+  @ApiOperation({ summary: 'Buscar datos históricos de un estudiante por cédula (Autocompletado)' })
+  searchCedula(@Param('cedula') cedula: string) {
+    return this.applicationsService.searchByCedula(cedula);
   }
 
 
@@ -108,14 +121,14 @@ export class ApplicationsController {
 
   // Estadísticas globales
   @Get('admin/stats')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   getGlobalStats() {
     return this.applicationsService.getGlobalStats();
   }
 
   // Listar todas las solicitudes con filtros
   @Get('admin/all')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   findAll(
     @Query('status') status?: ApplicationStatus,
     @Query('gradeLevel') gradeLevel?: string,
@@ -148,21 +161,29 @@ export class ApplicationsController {
 
   // Ver detalle de cualquier solicitud
   @Get('admin/:id')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   findOneAdmin(@Param('id') id: string) {
     return this.applicationsService.findOne(id);
   }
 
+  // Volcado anual de datos
+  @Post('admin/bulk/rollover')
+  @Roles('admin', 'superadmin', 'rector')
+  @ApiOperation({ summary: 'Ejecutar volcado anual (Rollover) de estudiantes matriculados a historial académico' })
+  async executeRollover() {
+    return this.applicationsService.executeRollover();
+  }
+
   // Poner en revisión
   @Post('admin/:id/review')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   setUnderReview(@Param('id') id: string) {
     return this.applicationsService.setUnderReview(id);
   }
 
   // Solicitar correcciones
   @Post('admin/:id/request-correction')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   requestCorrection(
     @Param('id') id: string,
     @Body('correctionRequest') correctionRequest: string,
@@ -172,7 +193,7 @@ export class ApplicationsController {
 
   // Aprobar solicitud
   @Post('admin/:id/approve')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   approve(
     @Param('id') id: string,
     @Body('adminNotes') adminNotes?: string,
@@ -182,7 +203,7 @@ export class ApplicationsController {
 
   // Rechazar solicitud
   @Post('admin/:id/reject')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   reject(
     @Param('id') id: string,
     @Body('rejectionReason') rejectionReason: string,
@@ -191,20 +212,20 @@ export class ApplicationsController {
   }
 
   @Post('admin/bulk/approve')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   bulkApprove(@Body('ids') ids: string[], @Request() req: any) {
     return this.applicationsService.bulkApprove(ids, req.user);
   }
 
   @Post('admin/bulk/reject')
-  @Roles('superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   bulkReject(@Body('ids') ids: string[], @Body('reason') reason: string, @Request() req: any) {
     return this.applicationsService.bulkReject(ids, reason, req.user);
   }
 
   // Asignar a directivo
   @Post('admin/:id/assign')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   assignToDirectivo(
     @Param('id') id: string,
     @Body('directivoId') directivoId: string,
@@ -215,7 +236,7 @@ export class ApplicationsController {
 
   // Agregar comentario interno
   @Post('admin/:id/comment')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   addInternalComment(
     @Param('id') id: string,
     @Body('comment') comment: string,
@@ -226,7 +247,7 @@ export class ApplicationsController {
 
   // Solicitudes asignadas a mí (para directivos)
   @Get('directivo/assigned')
-  @Roles('admin', 'superadmin', 'directivo', 'principal')
+  @Roles('admin', 'superadmin', 'rector')
   getAssignedToMe(
     @Request() req: any,
     @Query('status') status?: ApplicationStatus,
@@ -250,7 +271,7 @@ export class ApplicationsController {
 
   // Exportar admitidos CSV
   @Get('admin/export/admitted-csv')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('superadmin', 'admin', 'rector')
   async exportAdmittedCsv(@Request() res: any) {
     const csv = await this.applicationsService.exportAdmittedCsv();
     return { csv };
@@ -259,15 +280,16 @@ export class ApplicationsController {
   // === ASIGNACIÓN DE PARALELOS (Módulo 2.9) ===
 
   @Get('admin/:id/available-parallels')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('superadmin', 'admin', 'secretaria', 'rector')
   @ModuleAccess('matriculacion')
   getAvailableParallels(@Param('id') id: string) {
     return this.applicationsService.getAvailableParallels(id);
   }
 
   @Post('admin/:id/assign-parallel')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   @ModuleAccess('matriculacion')
+  @ApiOperation({ summary: 'Asignar paralelo y finalizar matriculación' })
   assignParallel(
     @Param('id') id: string,
     @Body('parallel') parallel: string,
@@ -279,7 +301,7 @@ export class ApplicationsController {
   // === PAGOS ===
 
   @Post('admin/:id/validate-payment')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   validatePayment(
     @Param('id') id: string,
     @Body('isValid') isValid: boolean,
@@ -292,7 +314,7 @@ export class ApplicationsController {
   // === GESTIÓN DE CURSILLOS ===
 
   @Post('admin/:id/cursillo-schedule')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   @ModuleAccess('cursillos')
   scheduleCursillo(
     @Param('id') id: string,
@@ -302,7 +324,7 @@ export class ApplicationsController {
   }
 
   @Post('admin/:id/cursillo-result')
-  @Roles('admin', 'superadmin', 'secretary', 'principal', 'directivo')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   @ModuleAccess('cursillos')
   recordCursilloResult(
     @Param('id') id: string,
@@ -314,9 +336,11 @@ export class ApplicationsController {
 
   // Eliminar solicitud (admin) — libera cupo
   @Delete('admin/:id')
-  @Roles('admin', 'superadmin', 'secretary', 'principal')
+  @Roles('admin', 'superadmin', 'secretaria', 'rector')
   @ModuleAccess('admisiones')
   adminRemove(@Param('id') id: string, @Request() req: any) {
     return this.applicationsService.adminRemove(id, req.user.id);
   }
 }
+
+

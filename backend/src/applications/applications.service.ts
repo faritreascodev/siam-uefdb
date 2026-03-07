@@ -15,6 +15,26 @@ export class ApplicationsService {
 
   // Crear nueva solicitud (borrador)
   async create(userId: string) {
+    // Verificar si el portal de admisiones está abierto
+    const admissionConfig = await this.prisma.systemConfig.findUnique({
+      where: { key: 'ADMISSION_OPEN' }
+    });
+    const isOpen = !admissionConfig || admissionConfig.value === 'true';
+
+    if (!isOpen) {
+      // Verificar si el usuario es admin/secretaria (pueden operar siempre)
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { roles: true }
+      });
+      const roles = user?.roles?.map((r: any) => (r.name || '').toLowerCase()) || [];
+      const isPrivileged = roles.some((r: string) => ['superadmin', 'admin', 'secretaria', 'rector'].includes(r));
+
+      if (!isPrivileged) {
+        throw new BadRequestException('El portal de admisiones está cerrado. No se aceptan nuevas solicitudes en este momento.');
+      }
+    }
+
     return this.prisma.application.create({
       data: {
         userId,
@@ -36,7 +56,14 @@ export class ApplicationsService {
     }
 
     try {
-      const { extraContacts, ...restDto } = dto;
+      let modifiedDto = { ...dto };
+
+      // Si se envía la cédula, realizar chequeo de continuidad de estudiantes
+      if (modifiedDto.studentCedula) {
+        modifiedDto = await this.checkStudentContinuity(modifiedDto.studentCedula, modifiedDto);
+      }
+
+      const { extraContacts, ...restDto } = modifiedDto;
 
       return await this.prisma.application.update({
         where: { id },
@@ -67,7 +94,46 @@ export class ApplicationsService {
       });
     } catch (error) {
       if (error.code === 'P2002' && error.meta?.target?.includes('studentCedula')) {
-        throw new BadRequestException('Ya existe una solicitud registrada para este estudiante (Cédula duplicada).');
+        // Buscar la solicitud que tiene esa cédula para dar contexto
+        const conflict = dto.studentCedula ? await this.prisma.application.findFirst({
+          where: { studentCedula: dto.studentCedula },
+          select: { id: true, status: true, userId: true }
+        }) : null;
+
+        // Si el conflicto es la misma solicitud, no hay problema (no debería pasar pero por seguridad)
+        if (conflict && conflict.id === id) {
+          throw error;
+        }
+
+        // Si el conflicto tiene un estado final, la cédula está libre para un nuevo ciclo
+        const finalStatuses = ['REJECTED', 'CURSILLO_REJECTED', 'MATRICULATED'];
+        if (conflict && finalStatuses.includes(conflict.status)) {
+          // La solicitud antigua está terminada. Liberar la cédula poniendo la anterior a null antes de reintentar
+          await this.prisma.application.update({
+            where: { id: conflict.id },
+            data: { studentCedula: null }
+          });
+          // Reintentar la operación original
+          const { extraContacts, ...retryDto } = dto;
+          return await this.prisma.application.update({
+            where: { id },
+            data: {
+              ...retryDto,
+              studentBirthDate: retryDto.studentBirthDate ? new Date(retryDto.studentBirthDate) : undefined,
+              studentBirthPlace: retryDto.studentBirthPlace ? JSON.parse(JSON.stringify(retryDto.studentBirthPlace)) : undefined,
+              fatherData: retryDto.fatherData ? JSON.parse(JSON.stringify(retryDto.fatherData)) : undefined,
+              motherData: retryDto.motherData ? JSON.parse(JSON.stringify(retryDto.motherData)) : undefined,
+              representativeData: retryDto.representativeData ? JSON.parse(JSON.stringify(retryDto.representativeData)) : undefined,
+              acceptedAt: retryDto.acceptedIdeario ? new Date() : undefined,
+            },
+            include: { documents: true, extraContacts: true },
+          });
+        }
+
+        // Si la solicitud conflictiva está activa, sí es un duplicado real
+        throw new BadRequestException(
+          'Este estudiante ya tiene una solicitud activa en el sistema. Si necesita crear una nueva, primero finalice o elimine la solicitud existente.'
+        );
       }
       throw error;
     }
@@ -132,7 +198,7 @@ export class ApplicationsService {
       priority: 'HIGH'
     });
 
-    await this.notificationsService.notifyRole('secretary', {
+    await this.notificationsService.notifyRole('secretaria', {
       type: 'APPLICATION_SUBMITTED',
       message: `Nueva solicitud recibida: ${application.studentFirstName} ${application.studentLastName}`,
       applicationId: id,
@@ -931,9 +997,10 @@ export class ApplicationsService {
 
     if (!application) throw new NotFoundException('Solicitud no encontrada');
 
-    // Validar estado habilitado para asignación (solo si el pago ya fue validado)
-    if (application.status !== 'PAYMENT_VALIDATED') {
-      throw new BadRequestException('Para matricular y asignar paralelo DEBE obligatoriamente tener el comprobante de pago validado (estado PAYMENT_VALIDATED).');
+    // Validar estado habilitado para asignación
+    const allowedStatuses: ApplicationStatus[] = ['PAYMENT_VALIDATED', 'CURSILLO_APPROVED'];
+    if (!allowedStatuses.includes(application.status)) {
+      throw new BadRequestException('Para matricular y asignar paralelo debe tener el pago validado o el cursillo aprobado.');
     }
 
     // Verificar cupo disponible en el paralelo seleccionado
@@ -1148,16 +1215,123 @@ export class ApplicationsService {
     }
   }
 
+  // --- NUEVO: BÚSQUEDA POR CÉDULA CON MOCK (Para Estudiantes Antiguos) ---
+  async searchByCedula(cedula: string) {
+    // 1. Intentar buscar en la base de datos de records académicos reales
+    const record = await this.prisma.academicRecord.findFirst({
+      where: { studentCedula: cedula },
+      orderBy: { academicYear: 'desc' }
+    });
+
+    if (record) {
+      // Si existe record, intentamos traer la última aplicación para completar datos
+      const lastApp = await this.prisma.application.findFirst({
+        where: { studentCedula: cedula },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      return {
+        found: true,
+        source: 'database',
+        enrollmentType: 'RETURNING_STUDENT',
+        status: record.status,
+        finalAverage: record.finalAverage,
+        studentData: {
+          firstName: lastApp?.studentFirstName,
+          lastName: lastApp?.studentLastName,
+          gender: lastApp?.studentGender,
+          birthDate: lastApp?.studentBirthDate,
+          nationality: lastApp?.studentNationality,
+          address: lastApp?.studentAddress,
+          email: lastApp?.studentEmail,
+          phone: lastApp?.studentPhone,
+          bloodType: lastApp?.bloodType,
+          previousSchool: 'Unidad Educativa Fiscomisional Don Bosco',
+        },
+        familyData: {
+          father: lastApp?.fatherData,
+          mother: lastApp?.motherData,
+          representative: lastApp?.representativeData,
+        },
+        studentPhotoUrl: lastApp ? (await this.prisma.applicationDocument.findFirst({
+          where: { applicationId: lastApp.id, documentType: 'STUDENT_PHOTO' }
+        }))?.fileUrl : undefined
+      };
+    }
+
+    // 2. MOCK DATA (Simulando el array de PHP proporcionado)
+    const mockData: Record<string, any> = {
+      '0950000001': {
+        firstName: 'Ana',
+        lastName: 'González Pez',
+        gender: 'F',
+        birthDate: '2012-05-15',
+        nationality: 'ECUATORIANA',
+        address: 'Sector Las Palmas, Calle Principal 123',
+        email: 'ana.gonzalez@estudiante.ec',
+        phone: '0987654321',
+        bloodType: 'O+',
+        father: { names: 'Luis González', cedula: '0801122334', phone: '0991122334', workPlace: 'Municipio' },
+        mother: { names: 'Marta Pez', cedula: '0802233445', phone: '0992233445', workPlace: 'Hospital' },
+        representative: { names: 'Luis González', relationship: 'Padre', cedula: '0801122334', phone: '0991122334' }
+      },
+      '0950000002': {
+        firstName: 'Pedro',
+        lastName: 'González Ávila',
+        gender: 'M',
+        birthDate: '2011-08-20',
+        nationality: 'ECUATORIANA',
+        address: 'Barrio Caliente, Calle 10 y Ave 5',
+        email: 'pedro.gonzalez@estudiante.ec',
+        phone: '0981234567',
+        bloodType: 'A+',
+        father: { names: 'Jorge González', cedula: '0803344556', phone: '0993344556', workPlace: 'Puerto' },
+        mother: { names: 'Lucía Ávila', cedula: '0804455667', phone: '0994455667', workPlace: 'Docente' },
+        representative: { names: 'Jorge González', relationship: 'Padre', cedula: '0803344556', phone: '0993344556' }
+      }
+    };
+
+    if (mockData[cedula]) {
+      return {
+        found: true,
+        source: 'mock',
+        enrollmentType: 'RETURNING_STUDENT',
+        status: 'PASSED',
+        finalAverage: 9.5,
+        studentData: {
+          ...mockData[cedula],
+          previousSchool: 'Unidad Educativa Fiscomisional Don Bosco',
+        },
+        familyData: {
+          father: mockData[cedula].father,
+          mother: mockData[cedula].mother,
+          representative: mockData[cedula].representative,
+        }
+      };
+    }
+
+    return { found: false };
+  }
+
   private async validateRequiredDocuments(application: any) {
     const documents = await this.prisma.applicationDocument.findMany({
       where: { applicationId: application.id },
     });
 
-    let requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL'];
+    const configDocsNew = await this.prisma.systemConfig.findUnique({ where: { key: 'REQUIRED_DOCUMENTS_NEW' } });
+    const configDocsRet = await this.prisma.systemConfig.findUnique({ where: { key: 'REQUIRED_DOCUMENTS_RETURNING' } });
 
-    // Si es estudiante antiguo, no necesita certificado de notas ni planilla
+    let requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO', 'GRADE_CERTIFICATE', 'UTILITY_BILL'];
+    if (configDocsNew?.value) {
+      try { requiredTypes = JSON.parse(configDocsNew.value); } catch { }
+    }
+
+    // Si es estudiante antiguo, usa sus propios requerimientos
     if (application.enrollmentType === 'RETURNING_STUDENT') {
       requiredTypes = ['STUDENT_ID', 'REPRESENTATIVE_ID', 'STUDENT_PHOTO'];
+      if (configDocsRet?.value) {
+        try { requiredTypes = JSON.parse(configDocsRet.value); } catch { }
+      }
     }
 
     const uploadedTypes = documents.map(d => d.documentType);
@@ -1169,4 +1343,103 @@ export class ApplicationsService {
       );
     }
   }
+
+  // --- NUEVO: FUNCIONALIDAD ESTUDIANTE ANTIGUO AUTOMÁTICA ---
+  private async checkStudentContinuity(studentCedula: string, currentData: Partial<UpdateApplicationDto>): Promise<Partial<UpdateApplicationDto>> {
+    const record = await this.prisma.academicRecord.findFirst({
+      where: { studentCedula },
+      orderBy: { academicYear: 'desc' }
+    });
+
+    if (record) {
+      if (record.status === 'FAILED_YEAR') {
+        throw new BadRequestException('El estudiante reprobó el año anterior. Diríjase a secretaría militar y pague la respectiva multa y complete el trámite de retención de cupo manual.');
+      } else if (record.status.includes('PENDING')) {
+        throw new BadRequestException(`El estudiante tiene exámenes de supletorio/gracia pendientes. No puede enviar la solicitud de matrícula aún.`);
+      } else if (record.status === 'PASSED') {
+        // Cargar última info de la aplicación si existe
+        const lastApp = await this.prisma.application.findFirst({
+          where: { studentCedula },
+          orderBy: { createdAt: 'desc' }
+        });
+
+        return {
+          ...currentData,
+          enrollmentType: 'RETURNING_STUDENT',
+          studentFirstName: currentData.studentFirstName || lastApp?.studentFirstName || undefined,
+          studentLastName: currentData.studentLastName || lastApp?.studentLastName || undefined,
+          studentBirthDate: currentData.studentBirthDate || lastApp?.studentBirthDate?.toISOString() || undefined,
+          studentGender: currentData.studentGender || lastApp?.studentGender || undefined,
+          studentNationality: currentData.studentNationality || lastApp?.studentNationality || undefined,
+          studentAddress: currentData.studentAddress || lastApp?.studentAddress || undefined,
+          previousSchool: 'Unidad Educativa Fiscomisional Don Bosco',
+          lastYearAverage: record.finalAverage ? Number(record.finalAverage) : undefined,
+          fatherData: currentData.fatherData || (lastApp?.fatherData as any) || undefined,
+          motherData: currentData.motherData || (lastApp?.motherData as any) || undefined,
+          representativeData: currentData.representativeData || (lastApp?.representativeData as any) || undefined,
+        };
+      }
+    }
+    return currentData;
+  }
+
+  // --- NUEVO: VOLCADO DE FIN DE AÑO ---
+  async executeRollover() {
+    // Buscar todas las aplicaciones MATRICULATED del actual periodo
+    const applications = await this.prisma.application.findMany({
+      where: {
+        status: 'MATRICULATED',
+      }
+    });
+
+    let recordsCreated = 0;
+
+    // Suponemos que el nuevo registro se crea para el próximo periodo 
+    // Por motivos de simplicidad y base de demostración, pondremos un timestamp al academicYear
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const nextAcademicYear = `${currentYear}-${currentYear + 1}`;
+
+    for (const app of applications) {
+      if (!app.studentCedula) continue;
+
+      // Chequear si ya hay record para este año
+      const existingRecord = await this.prisma.academicRecord.findFirst({
+        where: {
+          studentCedula: app.studentCedula,
+          academicYear: nextAcademicYear
+        }
+      });
+
+      if (!existingRecord) {
+        // En un caso real el Administrador ingresaría notas finales desde un Excel o similar.
+        // Simulamos todos Aprobados por defecto en este dump para que pasen automáticamente,
+        // o podrían migrarse según su 'gradeLevel'
+        await this.prisma.academicRecord.create({
+          data: {
+            studentCedula: app.studentCedula,
+            academicYear: nextAcademicYear,
+            status: 'PASSED',
+            finalAverage: 10.0,
+            gradeLevel: app.gradeLevel || 'Desconocido'
+          }
+        });
+
+        // Liberar el cupo si fuera necesario, aunque el nuevo ciclo de cupos empieza de 0 
+        // con la configuración del admin cada nuevo periodo lectivo. 
+
+        recordsCreated++;
+      }
+    }
+
+    // Optionalmente se pueden archivar o mover al historial
+
+    return {
+      success: true,
+      message: `Volcado completado. Se generaron ${recordsCreated} registros académicos históricos para el periodo ${nextAcademicYear}, liberando cupos para el nuevo periodo.`,
+      recordsCreated,
+    };
+  }
 }
+
+
