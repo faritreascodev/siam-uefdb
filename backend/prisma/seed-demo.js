@@ -67,7 +67,7 @@ async function main() {
                 const oldApp = await prisma.application.create({
                     data: {
                         userId: user.id,
-                        statusCedula: student.cedula,
+                        studentCedula: student.cedula,
                         studentFirstName: student.firstName,
                         studentLastName: student.lastName,
                         studentGender: student.gender,

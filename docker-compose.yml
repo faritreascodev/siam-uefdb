@@ -45,7 +45,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && pnpm run start:prod"
     networks:
       - dokploy-network
       - default
