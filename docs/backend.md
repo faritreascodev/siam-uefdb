@@ -1,38 +1,45 @@
-# Documentacion del Backend: API y Persistencia
+# Documentación del Backend: API y Persistencia
 
-El backend de SIAM gestiona la logica de negocio, el almacenamiento de datos y la seguridad mediante una arquitectura modular en NestJS.
+El backend de SIAM gestiona la lógica de negocio, el almacenamiento de datos y la seguridad mediante una arquitectura modular en NestJS.
 
-## Modulos Principales
+## Módulos Principales
 
-El sistema se divide en modulos independientes para facilitar el mantenimiento:
+El sistema se organiza en módulos independientes para optimizar el mantenimiento y la escalabilidad:
 
-* Auth: Gestion de registro, inicio de sesion y generacion de JWT. Implementa el flujo de aprobacion para nuevos usuarios.
-* Users: Gestion de perfiles y usuarios del sistema.
-* Applications: Nucleo del sistema. Gestiona el ciclo de vida de las solicitudes de admision (DRAFT -> SUBMITTED -> UNDER_REVIEW -> ... -> MATRICULATED).
-* Quotas: Sistema de gestion de cupos por jornada y nivel academivo.
-* Reports: Generacion de reportes PDF dinámicos utilizando Puppeteer.
-* Notifications: Sistema de notificaciones internas para informar sobre cambios en las solicitudes.
-* External-apis: Integracion con servicios externos de verificacion (simulado).
-* Extra-contacts: Modulo para gestionar contactos de emergencia adicionales por solicitud.
+* **Auth**: Gestión de registros, inicio de sesión y generación de tokens JWT. Implementa flujos de aprobación para nuevos usuarios.
+* **Users**: Administración de perfiles y permisos de usuario.
+* **Applications**: Núcleo del sistema para el ciclo de vida de solicitudes (Draft, Submitted, Under Review, Matriculated). Incluye la lógica de continuidad para estudiantes antiguos mediante búsqueda por cédula.
+* **Quotas**: Control de cupos por jornada, nivel académico y paralelo.
+* **Reports**: Generación de reportes dinámicos en formato PDF y exportación de datos en CSV.
+* **Notifications**: Sistema automatizado de alertas internas para cambios de estado.
+* **External-APIs**: Interfaz para la consulta de historial académico externo y datos históricos.
 
-## Base de Datos (Prisma)
+## Lógica de Continuidad Académica
 
-Se utiliza PostgreSQL como base de datos relacional. El esquema define las siguientes entidades clave:
+El sistema integra una funcionalidad de autocompletado automatizado para agilizar el registro de estudiantes con historial previo en la institución:
 
-* User: Almacena credenciales (hasheadas con bcrypt) y datos personales.
-* Role: Define los privilegios dentro del sistema.
-* Application: Entidad principal que centraliza toda la informacion del estudiante, documentos y observaciones administrativas.
-* ApplicationDocument: Referencia a los archivos cargados para cada solicitud.
-* AdmissionQuota: Registro de capacidad disponible por niveles.
-* PasswordRecoveryRequest: Gestiona las solicitudes de restablecimiento de contraseña.
+1. **Consulta de Identidad**: El endpoint `GET /applications/search-cedula/:cedula` consulta la base de datos de registros académicos históricos (`AcademicRecord`).
+2. **Recuperación de Información**: Al identificar un registro existente, se recuperan automáticamente los datos personales y familiares de la última solicitud procesada.
+3. **Exención de Procesos**: El motor de reglas identifica si el estudiante proviene de la propia institución, aplicando automáticamente la exención de cursillos de admisión.
+* **Extra-contacts**: Módulo para la gestión de contactos de emergencia adicionales por solicitud.
 
-## Flujo de Autenticacion
+## Persistencia de Datos (Prisma)
 
-1. El usuario envia sus credenciales al endpoint `/auth/login`.
-2. El servidor valida el hash de la contraseña y si la cuenta esta aprobada.
-3. Se firma un JWT con una duracion personalizada definido en las variables de entorno.
-4. El cliente incluye este token en el encabezado `Authorization: Bearer <token>` para cada peticion protegida.
+Se utiliza PostgreSQL como motor de base de datos relacional. El esquema define las siguientes entidades fundamentales:
 
-## Generacion de Reportes PDF
+* **User**: Credenciales de acceso (encriptadas con bcrypt) y metadatos de usuario.
+* **Role**: Definición jerárquica de privilegios.
+* **Application**: Entidad central que consolida la información del estudiante, documentación y estados administrativos.
+* **ApplicationDocument**: Gestión de archivos y requisitos cargados.
+* **AdmissionQuota**: Registro técnico de disponibilidad y capacidad institucional.
+* **PasswordRecoveryRequest**: Gestión de solicitudes de restablecimiento de contraseña.
 
-El backend utiliza Puppeteer para renderizar plantillas HTML y convertirlas a PDF. Esto permite generar documentos de alta calidad para las solicitudes de ingreso, incluyendo codigos de barras o sellos digitales si fuera necesario.
+## Seguridad y Autenticación
+
+1. El sistema valida las credenciales y el estado de aprobación de la cuenta.
+2. Se genera un token JWT con vigencia definida por parámetros de configuración.
+3. El intercambio de datos se protege mediante el encabezado `Authorization: Bearer <token>` en cada transacción.
+
+## Motor de Reportes Corporativos
+
+El backend emplea Puppeteer para la generación de documentos oficiales. Esto garantiza la emisión de reportes con alta fidelidad visual, permitiendo la inclusión de elementos técnicos como sellos digitales o registros institucionales.
