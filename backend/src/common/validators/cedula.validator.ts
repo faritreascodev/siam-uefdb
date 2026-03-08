@@ -48,3 +48,5 @@ export function validateCedulaEcuatoriana(cedula: string): boolean {
 
   return resultado === digitoVerificador;
 }
+
+

@@ -15,7 +15,7 @@ export class SystemConfigController {
     constructor(private readonly configService: SystemConfigService) { }
 
     @Get()
-    @Roles('superadmin', 'admin', 'secretary')
+    @Roles('superadmin', 'admin', 'secretaria')
     @ApiOperation({ summary: 'Get all system configurations' })
     @ModuleAccess('')
     findAll() {
@@ -23,7 +23,7 @@ export class SystemConfigController {
     }
 
     @Get(':key')
-    @Roles('superadmin', 'admin', 'secretary')
+    @Roles('superadmin', 'admin', 'secretaria')
     @ApiOperation({ summary: 'Get config by key' })
     @ModuleAccess('')
     findOne(@Param('key') key: string) {
@@ -31,7 +31,7 @@ export class SystemConfigController {
     }
 
     @Post(':key')
-    @Roles('superadmin', 'admin', 'secretary')
+    @Roles('superadmin', 'admin', 'secretaria')
     @ApiOperation({ summary: 'Update system configuration' })
     @ModuleAccess('configuracion')
     update(
@@ -42,3 +42,5 @@ export class SystemConfigController {
         return this.configService.update(key, value, req.user.id);
     }
 }
+
+

@@ -12,3 +12,5 @@ export class ExternalApisController {
     return this.externalApisService.searchByCedula(cedula);
   }
 }
+
+

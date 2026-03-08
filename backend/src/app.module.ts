@@ -18,6 +18,7 @@ import { ExtraContactsModule } from './extra-contacts/extra-contacts.module';
 import { AuditModule } from './audit/audit.module';
 import { SystemConfigModule } from './system-config/system-config.module';
 import { CursilloModule } from './cursillo/cursillo.module';
+import { FormConfigModule } from './form-config/form-config.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { CursilloModule } from './cursillo/cursillo.module';
     AuditModule,
     SystemConfigModule,
     CursilloModule,
+    FormConfigModule,
   ],
   controllers: [AppController],
   providers: [
@@ -53,3 +55,5 @@ import { CursilloModule } from './cursillo/cursillo.module';
   ],
 })
 export class AppModule { }
+
+
