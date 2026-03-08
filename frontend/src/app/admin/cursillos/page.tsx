@@ -78,6 +78,8 @@ interface CursilloSession {
 const GRADE_LABELS: Record<string, string> = {
   '8vo_basico': '8vo Básico',
   '1ro_bachillerato': '1ro Bachillerato',
+  '8vo EGB': '8vo Básico',
+  '1ero BGU': '1ro Bachillerato',
 };
 
 const SUBJECT_COLORS: Record<string, string> = {
@@ -92,8 +94,8 @@ const SUBJECT_COLORS: Record<string, string> = {
 
 export default function AdminCursillosPage() {
   const { data: session } = useSession();
-  // @ts-ignore
-  const token = session?.accessToken || session?.user?.accessToken;
+  // @ts-expect-error - accessToken is added in next-auth callbacks
+  const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
 
   const [sessions, setSessions] = useState<CursilloSession[]>([]);
   const [stats, setStats] = useState<any>(null);
@@ -128,8 +130,9 @@ export default function AdminCursillosPage() {
       setSessions(sessData);
       setStats(statsData);
       // Solo apps que aplican para cursillo y no son DRAFT/REJECTED básicos
+      const CURSILLO_GRADES = ['8vo_basico', '1ro_bachillerato', '8vo EGB', '1ero BGU'];
       const filtered = (appsData.data || []).filter((app: any) =>
-        ['8vo_basico', '1ro_bachillerato'].includes(app.gradeLevel || '') &&
+        CURSILLO_GRADES.includes(app.gradeLevel || '') &&
         !['DRAFT', 'SUBMITTED'].includes(app.status)
       );
       setApplications(filtered);

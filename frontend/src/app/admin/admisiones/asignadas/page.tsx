@@ -50,10 +50,9 @@ export default function AsignadasPage() {
     shift: undefined as string | undefined
   });
 
-  // @ts-ignore
-  const token = session?.accessToken || session?.user?.accessToken;
-  // @ts-ignore
-  const userName = session?.user?.firstName || session?.user?.name || 'Usuario';
+  // @ts-expect-error - accessToken is added in next-auth callbacks
+  const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
+  const userName = (session?.user as { firstName?: string; name?: string })?.firstName || session?.user?.name || 'Usuario';
 
   useEffect(() => {
     async function loadData() {
@@ -228,7 +227,7 @@ export default function AsignadasPage() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex gap-2 items-center">
                 <Input
                   type="date"
@@ -262,7 +261,7 @@ export default function AsignadasPage() {
             <div className="text-center py-12 text-muted-foreground">
               <ClipboardList className="mx-auto h-12 w-12 opacity-30 mb-2" />
               <p>
-                {applications.length === 0 
+                {applications.length === 0
                   ? 'No tienes solicitudes asignadas'
                   : 'No hay solicitudes que coincidan con la búsqueda'
                 }

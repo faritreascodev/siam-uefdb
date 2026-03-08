@@ -26,8 +26,8 @@ export default function AuditoriaPage() {
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(1)
 
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken
+    // @ts-expect-error - accessToken is added in next-auth callbacks
+    const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken
 
     useEffect(() => {
         async function fetchLogs() {

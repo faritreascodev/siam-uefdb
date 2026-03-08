@@ -1,21 +1,12 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-import { getAllApplications, getGlobalStats, PaginatedResponse } from '@/lib/api-admin-applications';
-import { Application, ApplicationStats, GRADE_LEVELS, STATUS_LABELS, STATUS_COLORS } from '@/types/application';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEffect, useState, useCallback } from 'react';
+import { getAllApplications, getGlobalStats } from '@/lib/api-admin-applications';
+import { Application, ApplicationStats, GRADE_LEVELS } from '@/types/application';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -36,9 +27,6 @@ import {
   ChevronRight,
   GraduationCap,
 } from 'lucide-react';
-import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { DataTable } from '@/components/ui/data-table';
 import { columns } from './columns';
 import { bulkApproveApplications, bulkRejectApplications } from '@/lib/api-admin-applications';
@@ -51,7 +39,6 @@ export default function AdminAdmisionesPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({
     status: 'ALL',
     gradeLevel: 'ALL',
@@ -63,10 +50,10 @@ export default function AdminAdmisionesPage() {
   });
   const limit = 15;
 
-  // @ts-ignore
-  const token = session?.accessToken || session?.user?.accessToken;
+  // @ts-expect-error - accessToken is added in next-auth callbacks
+  const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!token) return;
 
     setLoading(true);
@@ -75,7 +62,7 @@ export default function AdminAdmisionesPage() {
         getAllApplications(token, {
           status: filters.status === 'ALL' ? undefined : filters.status,
           gradeLevel: filters.gradeLevel === 'ALL' ? undefined : filters.gradeLevel,
-          search: filters.search || undefined, // Send search to backend
+          search: filters.search || undefined,
           startDate: filters.startDate || undefined,
           endDate: filters.endDate || undefined,
           specialty: filters.specialty,
@@ -86,7 +73,6 @@ export default function AdminAdmisionesPage() {
         getGlobalStats(token),
       ]);
       setApplications(paginatedData.data);
-      setTotal(paginatedData.total);
       setTotalPages(paginatedData.totalPages);
       setStats(statsData);
     } catch (error) {
@@ -94,15 +80,14 @@ export default function AdminAdmisionesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, page, filters, limit]);
 
   useEffect(() => {
-    // Debounce search? For now direct call or we can add debounce
     const timer = setTimeout(() => {
       loadData();
     }, 500);
     return () => clearTimeout(timer);
-  }, [token, page, filters.status, filters.gradeLevel, filters.search, filters.startDate, filters.endDate, filters.specialty, filters.shift]);
+  }, [loadData]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -110,7 +95,7 @@ export default function AdminAdmisionesPage() {
   }, [filters.status, filters.gradeLevel, filters.search, filters.startDate, filters.endDate, filters.specialty, filters.shift]);
 
   // Filtro local eliminado a favor de backend filtering
-  const filteredApplications = applications;
+
 
   if (loading && applications.length === 0) {
     return (
@@ -315,8 +300,8 @@ export default function AdminAdmisionesPage() {
             data={applications}
             bulkActions={(table) => {
               const selectedRows = table.getFilteredSelectedRowModel().rows
-              const selectedIds = selectedRows.map((row: any) => row.original.id)
-              const canApprove = selectedRows.some((row: any) => ['SUBMITTED', 'UNDER_REVIEW', 'CURSILLO_APPROVED'].includes(row.original.status))
+              const selectedIds = selectedRows.map((row: { original: { id: string } }) => row.original.id)
+              const canApprove = selectedRows.some((row: { original: { status: string } }) => ['SUBMITTED', 'UNDER_REVIEW', 'CURSILLO_APPROVED'].includes(row.original.status))
 
               const handleBulkApprove = async () => {
                 if (!token) return

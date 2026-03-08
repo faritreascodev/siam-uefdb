@@ -227,8 +227,14 @@ export async function checkQuotaAvailability(
 }
 
 // Obtener estadísticas globales (admin)
-export async function getGlobalStats(token: string) {
-  const res = await fetch(`${API_URL}/applications/admin/stats`, {
+export async function getGlobalStats(token: string, startDate?: string, endDate?: string) {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+
+  const url = `${API_URL}/reports/stats/dashboard${params.toString() ? `?${params.toString()}` : ''}`;
+
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error('Error al obtener estadísticas globales');

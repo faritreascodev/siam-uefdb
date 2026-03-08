@@ -36,7 +36,7 @@ const ALL_GRADES = [
   { value: "3ro BGU", label: "3° Bachillerato" },
 ]
 
-type ShiftType = '' | 'MORNING' | 'AFTERNOON'
+type ShiftType = '' | 'MORNING' | 'AFTERNOON' | 'all'
 
 export default function NominaReportPage() {
   const { data: session } = useSession()
@@ -66,7 +66,7 @@ export default function NominaReportPage() {
       const response = await getAllApplications(token, {
         status: 'MATRICULATED',
         gradeLevel,
-        shift: shift || undefined,
+        shift: shift && shift !== 'all' ? shift : undefined,
         specialty: specialty && specialty !== 'all' ? specialty : undefined,
         assignedParallel: parallel && parallel !== 'all' ? parallel : undefined,
         limit: 500,

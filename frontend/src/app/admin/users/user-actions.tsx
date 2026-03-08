@@ -35,8 +35,11 @@ import {
 } from "@/components/ui/alert-dialog" // Use the polyfill or real component
 import { resetPassword } from "@/lib/api-users"
 
+import { useRoles } from "@/hooks/use-roles"
+
 export function UserActions({ user, onSuccess }: UserActionsProps) {
   const { data: session } = useSession()
+  const { isSuperAdmin } = useRoles()
   const [editOpen, setEditOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -69,15 +72,15 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
     if (!token) return
 
     try {
-        const result = await resetPassword(token, user.id)
-        setTempPassword(result.tempPassword || null)
-        toast.success("Contraseña reseteada exitosamente")
+      const result = await resetPassword(token, user.id)
+      setTempPassword(result.tempPassword || null)
+      toast.success("Contraseña reseteada exitosamente")
     } catch (error) {
-        console.error(error)
-        toast.error("Error al resetear contraseña")
-        setResetDialogOpen(false) // Close if error, or keep open? Close for now.
+      console.error(error)
+      toast.error("Error al resetear contraseña")
+      setResetDialogOpen(false) // Close if error, or keep open? Close for now.
     } finally {
-        setLoading(false)
+      setLoading(false)
     }
   }
 
@@ -104,13 +107,15 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             Editar Usuario
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setRoleOpen(true)}>
-            Gestionar Roles
-          </DropdownMenuItem>
+          {isSuperAdmin() && (
+            <DropdownMenuItem onClick={() => setRoleOpen(true)}>
+              Gestionar Roles
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={() => setResetDialogOpen(true)}>
             Restablecer Contraseña
           </DropdownMenuItem>
-          <DropdownMenuItem 
+          <DropdownMenuItem
             className={user.isActive ? "text-red-600 focus:text-red-600" : "text-green-600 focus:text-green-600"}
             onClick={handleToggleStatus}
             disabled={loading}
@@ -120,18 +125,18 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <UserDialog 
-        user={user} 
-        open={editOpen} 
-        onOpenChange={setEditOpen} 
-        onSuccess={onSuccess} 
+      <UserDialog
+        user={user}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSuccess={onSuccess}
       />
-      
-      <RoleDialog 
-        user={user} 
-        open={roleOpen} 
-        onOpenChange={setRoleOpen} 
-        onSuccess={onSuccess} 
+
+      <RoleDialog
+        user={user}
+        open={roleOpen}
+        onOpenChange={setRoleOpen}
+        onSuccess={onSuccess}
       />
 
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
@@ -140,11 +145,11 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
             <AlertDialogTitle>Restablecer Contraseña</AlertDialogTitle>
             <AlertDialogDescription>
               {tempPassword ? (
-                 <div className="mt-4 p-4 bg-muted rounded-md text-center">
-                    <p className="font-medium text-foreground">Nueva Contraseña Temporal:</p>
-                    <p className="text-2xl font-bold tracking-widest my-2 select-all">{tempPassword}</p>
-                    <p className="text-xs text-muted-foreground">Por favor comparta esto con el usuario inmediatamente.</p>
-                 </div>
+                <div className="mt-4 p-4 bg-muted rounded-md text-center">
+                  <p className="font-medium text-foreground">Nueva Contraseña Temporal:</p>
+                  <p className="text-2xl font-bold tracking-widest my-2 select-all">{tempPassword}</p>
+                  <p className="text-xs text-muted-foreground">Por favor comparta esto con el usuario inmediatamente.</p>
+                </div>
               ) : (
                 "¿Está seguro de que desea restablecer la contraseña de este usuario? Se generará una contraseña temporal."
               )}
@@ -152,17 +157,17 @@ export function UserActions({ user, onSuccess }: UserActionsProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             {!tempPassword && (
-                <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel disabled={loading}>Cancelar</AlertDialogCancel>
             )}
             {tempPassword ? (
-                <AlertDialogAction onClick={() => {
-                    setResetDialogOpen(false)
-                    setTempPassword(null)
-                }}>Cerrar</AlertDialogAction>
+              <AlertDialogAction onClick={() => {
+                setResetDialogOpen(false)
+                setTempPassword(null)
+              }}>Cerrar</AlertDialogAction>
             ) : (
-                <Button onClick={handleResetPassword} disabled={loading}>
-                    {loading ? "Restableciendo..." : "Confirmar Restablecimiento"}
-                </Button>
+              <Button onClick={handleResetPassword} disabled={loading}>
+                {loading ? "Restableciendo..." : "Confirmar Restablecimiento"}
+              </Button>
             )}
           </AlertDialogFooter>
         </AlertDialogContent>

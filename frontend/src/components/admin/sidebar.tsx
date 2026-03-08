@@ -20,10 +20,8 @@ export function AdminSidebar() {
   const { data: session } = useSession()
   const {
     isFullAdmin,
-    isAdmin,
-    isSuperAdmin,
-    isPrincipal,
-    isSecretary,
+    isRector,
+    isSecretaria,
     canManageUsers,
     canViewAudit,
     canAccessSettings,
@@ -56,8 +54,8 @@ export function AdminSidebar() {
     })
   }, [session])
 
-  const isSec = isSecretary()
-  const isPrinc = isPrincipal()
+  const isSec = isSecretaria()
+  const isPrinc = isRector()
   const fullAdmin = isFullAdmin()
 
   /**

@@ -35,6 +35,7 @@ import {
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useRoles } from '@/hooks/use-roles';
 
 function requiresCursillo(gradeLevel?: string | null, previousSchool?: string | null): boolean {
   if (!gradeLevel) return false;
@@ -44,6 +45,13 @@ function requiresCursillo(gradeLevel?: string | null, previousSchool?: string | 
   if (!previousSchool) return true;
   const school = previousSchool.toUpperCase();
   return !['DON BOSCO', 'UEFDB', 'FISCOMISIONAL DON BOSCO'].some(kw => school.includes(kw));
+}
+
+function getFileUrl(url?: string | null) {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
+  return `${baseUrl}/${url.replace(/^\/+/, '')}`;
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -59,9 +67,10 @@ interface Props { params: Promise<{ id: string }>; }
 
 export default function ApplicationDetailPage({ params }: Props) {
   const { data: session } = useSession();
+  const { isSuperAdmin } = useRoles();
   const router = useRouter();
-  // @ts-ignore
-  const token = session?.accessToken || session?.user?.accessToken;
+  // @ts-expect-error - accessToken is added in next-auth callbacks
+  const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
 
   const [id, setId] = useState<string | null>(null);
   const [application, setApplication] = useState<Application | null>(null);
@@ -96,9 +105,12 @@ export default function ApplicationDetailPage({ params }: Props) {
   const loadApp = useCallback(async () => {
     if (!token || !id) return;
     try {
-      const [data, dirs] = await Promise.all([getApplicationDetail(token, id), getUsers(token, 'principal')]);
+      const [data, dirs] = await Promise.all([
+        getApplicationDetail(token, id),
+        getUsers(token, 'principal').catch(() => [])
+      ]);
       setApplication(data);
-      setDirectivos(dirs);
+      setDirectivos(dirs || []);
       if (data.assignedToId) setDirectivoId(data.assignedToId);
     } catch (err: any) {
       toast.error(err.message || 'Error al cargar solicitud');
@@ -359,8 +371,8 @@ export default function ApplicationDetailPage({ params }: Props) {
                   <BookOpen className="h-3.5 w-3.5 mr-1" /> Inscribir en Cursillo
                 </Button>
               )}
-              {/* Asignar paralelo si pago validado */}
-              {s === 'PAYMENT_VALIDATED' && (
+              {/* Asignar paralelo si pago validado O cursillo aprobado */}
+              {(s === 'PAYMENT_VALIDATED' || s === 'CURSILLO_APPROVED') && (
                 <Button size="sm" className="bg-purple-600 hover:bg-purple-700" onClick={handleOpenAssign} disabled={loadingParallels}>
                   {loadingParallels ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <GraduationCap className="h-3.5 w-3.5 mr-1" />} Asignar Paralelo
                 </Button>
@@ -394,7 +406,20 @@ export default function ApplicationDetailPage({ params }: Props) {
         <TabsContent value="info" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><User className="h-4 w-4" />Datos del Estudiante</CardTitle></CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="flex items-center gap-2 text-base"><User className="h-4 w-4" />Datos del Estudiante</CardTitle>
+                {(() => {
+                  const photoDoc = application.documents?.find(d => d.documentType === 'STUDENT_PHOTO');
+                  if (!photoDoc) return null;
+                  const url = getFileUrl(photoDoc.fileUrl);
+                  return (
+                    <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="Foto Estudiante" className="h-full w-full object-cover" />
+                    </div>
+                  );
+                })()}
+              </CardHeader>
               <CardContent className="space-y-2">
                 <InfoRow label="Nombres" value={`${application.studentFirstName} ${application.studentLastName}`} />
                 <InfoRow label="Cédula" value={application.studentCedula} />
@@ -483,7 +508,7 @@ export default function ApplicationDetailPage({ params }: Props) {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {application.documents.map((doc: any) => (
                     <a key={doc.id}
-                      href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${doc.fileUrl}`}
+                      href={`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '')}/${doc.fileUrl.replace(/^\/+/, '')}`}
                       target="_blank" rel="noopener noreferrer"
                       className="flex items-center gap-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors group">
                       <FileText className="h-8 w-8 text-muted-foreground group-hover:text-primary" />
@@ -622,10 +647,12 @@ export default function ApplicationDetailPage({ params }: Props) {
                         <p className="text-sm text-red-600">Eliminar la solicitud libera el cupo para otro aspirante.</p>
                       </div>
                     </div>
-                    <Button variant="destructive" className="w-full" onClick={handleAdminRemove} disabled={actionLoading}>
-                      {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                      Eliminar solicitud y liberar cupo
-                    </Button>
+                    {isSuperAdmin() && (
+                      <Button variant="destructive" className="w-full" onClick={handleAdminRemove} disabled={actionLoading}>
+                        {actionLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                        Eliminar solicitud y liberar cupo
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -657,7 +684,7 @@ export default function ApplicationDetailPage({ params }: Props) {
 
               {application.documents?.filter((d: any) => d.documentType === 'PAYMENT_RECEIPT').map((doc: any) => (
                 <a key={doc.id}
-                  href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/${doc.fileUrl}`}
+                  href={getFileUrl(doc.fileUrl)}
                   target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors group">
                   <FileText className="h-10 w-10 text-muted-foreground group-hover:text-primary" />
@@ -776,7 +803,7 @@ export default function ApplicationDetailPage({ params }: Props) {
             </div>
 
             {/* Zona peligro */}
-            {['REJECTED', 'CURSILLO_REJECTED'].includes(application.status) && (
+            {isSuperAdmin() && ['REJECTED', 'CURSILLO_REJECTED'].includes(application.status) && (
               <Card className="border-destructive/50">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base text-destructive"><Trash2 className="h-4 w-4" />Zona de Peligro</CardTitle>

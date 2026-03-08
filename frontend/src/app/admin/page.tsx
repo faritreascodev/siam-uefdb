@@ -9,7 +9,6 @@ import { getGlobalStats } from "@/lib/api-applications";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Users,
-  ShieldCheck,
   BarChart3,
   Settings,
   LogOut,
@@ -23,7 +22,7 @@ import {
   History
 } from "lucide-react";
 
-function DashboardStats({ stats }: { stats: any }) {
+function DashboardStats({ stats }: { stats: { total: number; draft: number; submitted: number; underReview?: number; requiresCorrection: number; approved: number; rejected: number } | null }) {
   if (!stats) return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
       {[1, 2, 3, 4].map((i) => (
@@ -98,21 +97,25 @@ function DashboardStats({ stats }: { stats: any }) {
   );
 }
 
-function AdmissionFunnel({ stats }: { stats: any }) {
+function AdmissionFunnel({ stats }: { stats: { total: number; submitted: number; underReview?: number; approved: number; matriculated: number } | null }) {
   if (!stats) return null;
 
-  const total = stats.total || 1;
+  // El total base para los cálculos del embudo debe ser al menos 1 para evitar divisiones por cero
+  // Si no hay solicitudes en el periodo, usamos el máximo entre las etapas para una visualización coherente
+  const maxVal = Math.max(stats.total || 0, (stats.submitted || 0) + (stats.underReview || 0), stats.approved || 0, stats.matriculated || 0);
+  const baseTotal = maxVal || 1;
+
   const stages = [
-    { label: 'Solicitudes Totales', value: stats.total, color: 'bg-slate-200' },
+    { label: 'Solicitudes Totales', value: stats.total || 0, color: 'bg-slate-200' },
     { label: 'Enviadas / Revisión', value: (stats.submitted || 0) + (stats.underReview || 0), color: 'bg-blue-100 text-blue-700' },
-    { label: 'Aprobadas', value: stats.approved, color: 'bg-green-100 text-green-700 font-bold' },
+    { label: 'Aprobadas', value: stats.approved || 0, color: 'bg-green-100 text-green-700 font-bold' },
     { label: 'Matriculados', value: stats.matriculated || 0, color: 'bg-primary text-white font-bold' },
   ];
 
   return (
     <div className="space-y-4">
       {stages.map((stage, i) => {
-        const percentage = Math.round((stage.value / total) * 100);
+        const percentage = Math.min(100, Math.round(((stage.value || 0) / baseTotal) * 100));
         return (
           <div key={i} className="space-y-1">
             <div className="flex justify-between text-xs font-medium">
@@ -137,56 +140,136 @@ function AdmissionFunnel({ stats }: { stats: any }) {
 
 function DashboardStatsWithFunnel() {
   const { data: session } = useSession();
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<{ total: number; draft: number; submitted: number; underReview?: number; requiresCorrection: number; approved: number; rejected: number; matriculated: number } | null>(null);
+  const [dailySummary, setDailySummary] = useState<{ newApplications: number; pendingReview: number; approved: number; paymentsRegistered: number; matriculated: number } | null>(null);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken;
+    const token = (session as any)?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
     if (token) {
-      getGlobalStats(token).then(setStats).catch(console.error);
+      setLoading(true);
+      Promise.all([
+        getGlobalStats(token, startDate, endDate),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/reports/daily-summary`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json())
+      ]).then(([statsData, summaryData]) => {
+        setStats(statsData);
+        setDailySummary(summaryData);
+      }).catch(console.error).finally(() => setLoading(false));
     }
-  }, [session]);
+  }, [session, startDate, endDate]);
 
   return (
     <div className="space-y-6 mb-8">
-      <DashboardStats stats={stats} />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
-              <BarChart3 className="h-5 w-5" />
-              Embudo de Proceso de Admisión
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <AdmissionFunnel stats={stats} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-500" />
-              Resumen Diario
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-slate-50/50">
-              <Clock className="h-8 w-8 mb-2 opacity-20" />
-              <p className="text-sm">Sin pendientes para hoy</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border shadow-sm mb-6">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          <h3 className="font-bold">Análisis de Datos</h3>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Desde:</span>
+            <input
+              type="date"
+              className="text-sm border rounded-md p-1 focus:ring-2 focus:ring-primary outline-none"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">Hasta:</span>
+            <input
+              type="date"
+              className="text-sm border rounded-md p-1 focus:ring-2 focus:ring-primary outline-none"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+          {(startDate || endDate) && (
+            <button
+              onClick={() => { setStartDate(""); setEndDate(""); }}
+              className="text-xs text-red-600 hover:underline px-2"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
+
+      {loading && !stats ? (
+        <div className="flex justify-center py-12">
+          <Clock className="animate-spin h-8 w-8 text-primary opacity-50" />
+        </div>
+      ) : (
+        <>
+          <DashboardStats stats={stats} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold flex items-center gap-2 text-primary">
+                  <BarChart3 className="h-5 w-5" />
+                  Embudo de Proceso de Admisión
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AdmissionFunnel stats={stats} />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-amber-500" />
+                  Resumen Diario
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {dailySummary ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-blue-50 p-3 rounded-lg border text-center">
+                      <p className="text-2xl font-bold text-blue-700">{dailySummary.newApplications}</p>
+                      <p className="text-xs font-medium text-blue-600">Nuevas Hoy</p>
+                    </div>
+                    <div className="bg-amber-50 p-3 rounded-lg border text-center">
+                      <p className="text-2xl font-bold text-amber-700">{dailySummary.pendingReview}</p>
+                      <p className="text-xs font-medium text-amber-600">Pendientes Tot.</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded-lg border text-center">
+                      <p className="text-2xl font-bold text-green-700">{dailySummary.approved}</p>
+                      <p className="text-xs font-medium text-green-600">Aprobadas Hoy</p>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded-lg border text-center">
+                      <p className="text-2xl font-bold text-purple-700">{dailySummary.paymentsRegistered}</p>
+                      <p className="text-xs font-medium text-purple-600">Pagos Hoy</p>
+                    </div>
+                    <div className="bg-indigo-50 p-3 rounded-lg border text-center col-span-2">
+                      <p className="text-2xl font-bold text-indigo-700">{dailySummary.matriculated}</p>
+                      <p className="text-xs font-medium text-indigo-600">Matriculados Hoy</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-48 text-muted-foreground border-2 border-dashed rounded-lg bg-slate-50/50">
+                    <Clock className="h-8 w-8 mb-2 opacity-20 animate-pulse" />
+                    <p className="text-sm">Cargando...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
-  )
+  );
 }
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { isAdmin, isSuperAdmin, isDirectivo } = useRoles();
+  const { isAdmin, isSuperAdmin, isDirectivo, roles } = useRoles();
   const canViewMap = status === "authenticated" && (isAdmin() || isSuperAdmin() || isDirectivo());
 
   useEffect(() => {
@@ -224,7 +307,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-4">
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium leading-none">{session.user.name || session.user.email}</p>
-                <p className="text-xs text-muted-foreground mt-1">Administrador</p>
+                <p className="text-xs text-muted-foreground mt-1 capitalize">{roles[0] || 'Administrador'}</p>
               </div>
               <button
                 onClick={() => signOut({ callbackUrl: "/login" })}

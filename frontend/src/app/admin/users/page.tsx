@@ -17,17 +17,17 @@ import { useRoles } from "@/hooks/use-roles"
 import { useRouter } from "next/navigation"
 
 export default function UsersPage() {
-  const { data: session } = useSession()
   const router = useRouter()
-  const { isSuperAdmin, isAdmin, isSecretary } = useRoles()
+  const { data: session } = useSession()
+  const { isSuperAdmin, isAdmin, isSecretaria } = useRoles()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
   const loadUsers = async () => {
-    // @ts-ignore
-    const token = session?.accessToken || session?.user?.accessToken
+    // @ts-expect-error - accessToken is added in next-auth callbacks
+    const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken
 
     if (!token) {
       // If no token immediately, maybe waiting for session to stabilize?
@@ -39,7 +39,7 @@ export default function UsersPage() {
     setError(null)
     try {
       // Configuración de permisos para secretaría
-      if (isSecretary() && !isAdmin() && !isSuperAdmin()) {
+      if (isSecretaria() && !isAdmin() && !isSuperAdmin()) {
         const configs = await getSystemConfigs(token)
         const canManage = configs.find((c: any) => c.key === 'SECRETARY_MANAGE_USERS')?.value === 'true'
         if (!canManage) {
