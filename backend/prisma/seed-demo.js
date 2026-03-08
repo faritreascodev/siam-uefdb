@@ -8,7 +8,7 @@ async function hash(password) {
 }
 
 async function main() {
-    console.log('--- INICIO DE SEED MAESTRO (PRESENTACIÓN JURADO) ---');
+    console.log('--- INICIO DE SEED MAESTRO PARA PRESENTACIÓN REALISTA ---');
 
     // 1. ROLES
     const rolesData = [
@@ -26,28 +26,30 @@ async function main() {
             update: { description: r.description },
             create: r,
         });
-        roles[r.name] = role.id;
+        roles[role.name] = role.id;
     }
 
-    // 2. USUARIOS ADMINISTRATIVOS
-    const adminPass = await hash('Admin123!');
+    // 2. USUARIOS MAESTROS (Contraseñas solicitadas por el usuario)
     const usersData = [
-        { email: 'superadmin@uefdb.edu.ec', firstName: 'Admin', lastName: 'Sistema', role: 'superadmin' },
-        { email: 'rector@uefdb.edu.ec', firstName: 'Carlos', lastName: 'Mendoza', role: 'rector' },
-        { email: 'secretaria@uefdb.edu.ec', firstName: 'Ana', lastName: 'Reyes', role: 'secretaria' },
-        { email: 'secretaria@demo.com', firstName: 'Secretaria', lastName: 'Demo', role: 'secretaria' },
+        { email: 'superadmin@uefdb.edu.ec', pass: 'SuperAdmin123!', first: 'Sistema', last: 'Superadmin', role: 'superadmin' },
+        { email: 'admin@uefdb.edu.ec', pass: 'Admin123!', first: 'Admin', last: 'Academico', role: 'admin' },
+        { email: 'rector@uefdb.edu.ec', pass: 'Rector123!', first: 'Carlos', last: 'Mendoza', role: 'rector' },
+        { email: 'secretaria@uefdb.edu.ec', pass: 'Secretaria123!', first: 'Ana', last: 'Reyes', role: 'secretaria' },
+        { email: 'secretaria@demo.com', pass: 'Demo123!', first: 'Secretaria', last: 'Demo', role: 'secretaria' },
+        { email: 'apoderado@demo.com', pass: 'Demo123!', first: 'Carlos', last: 'Demo', role: 'apoderado' },
     ];
 
     const userInstances = {};
     for (const u of usersData) {
+        const hashedPassword = await hash(u.pass);
         const user = await prisma.user.upsert({
             where: { email: u.email },
-            update: { status: 'ACTIVO', isActive: true },
+            update: { status: 'ACTIVO', isActive: true, password: hashedPassword },
             create: {
                 email: u.email,
-                password: adminPass,
-                firstName: u.firstName,
-                lastName: u.lastName,
+                password: hashedPassword,
+                firstName: u.first,
+                lastName: u.last,
                 status: 'ACTIVO',
                 isActive: true,
             },
@@ -60,38 +62,63 @@ async function main() {
         });
     }
 
-    // 3. DATOS ACADÉMICOS (RECORDS PARA REINGRESO)
-    const academicYears = ['2023-2024', '2024-2025'];
+    // 3. CATALOGO DE CURSOS Y CUPOS COMPLETOS
     const levels = [
         'Inicial 1', 'Inicial 2', '1ero EGB', '2do EGB', '3ro EGB',
         '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB',
         '9no EGB', '10mo EGB', '1ero BGU', '2do BGU', '3ero BGU'
     ];
 
-    // 4. ESCENARIOS REALISTAS
-    console.log('Generando escenarios de admisiones...');
-    const demoApoderadoPass = await hash('Demo123!');
+    console.log('Generando cupos para todos los cursos (Matutina y Vespertina)...');
+    for (const level of levels) {
+        const shifts = ['Matutina', 'Vespertina'];
+        const parallels = ['A', 'B'];
 
-    // Lista de estudiantes para poblar el sistema
+        for (const shift of shifts) {
+            // Lógica de Especialidades
+            let specialties = [null];
+            if (level.includes('BGU')) {
+                specialties = ['BGU Ciencias'];
+                // BT Informática SOLO en Vespertina
+                if (level === '1ero BGU' && shift === 'Vespertina') {
+                    specialties.push('BT Informática');
+                }
+            }
+
+            for (const spec of specialties) {
+                for (const p of parallels) {
+                    await prisma.admissionQuota.upsert({
+                        where: { quotaIdentifier: { level, parallel: p, shift, specialty: spec, academicYear: '2026-2027' } },
+                        update: { totalQuota: 30 },
+                        create: { level, parallel: p, shift, specialty: spec, totalQuota: 30, academicYear: '2026-2027' }
+                    });
+                }
+            }
+        }
+    }
+
+    // 4. SOLICITUDES REALISTAS (TODOS LOS ESTADOS)
+    console.log('Generando solicitudes de ejemplo...');
     const scenarios = [
-        { email: 'padre1@demo.com', studentName: 'Mateo', studentLastName: 'Villavicencio', status: 'MATRICULATED', grade: '1ero BGU', type: 'RETURNING_STUDENT', cedula: '1722839401' },
-        { email: 'padre2@demo.com', studentName: 'Sofía', studentLastName: 'Cárdenas', status: 'APPROVED', grade: '8vo EGB', type: 'NEW_STUDENT', cedula: '1722839402' },
-        { email: 'padre3@demo.com', studentName: 'Lucas', studentLastName: 'Moreno', status: 'PAYMENT_UPLOADED', grade: '10mo EGB', type: 'RETURNING_STUDENT', cedula: '1722839403' },
-        { email: 'padre4@demo.com', studentName: 'Emma', studentLastName: 'Salazar', status: 'UNDER_REVIEW', grade: '2do EGB', type: 'NEW_STUDENT', cedula: '1722839404' },
-        { email: 'padre5@demo.com', studentName: 'Daniel', studentLastName: 'Rojas', status: 'CURSILLO_SCHEDULED', grade: '1ero BGU', type: 'NEW_STUDENT', cedula: '1722839405' },
-        { email: 'padre6@demo.com', studentName: 'Valentina', studentLastName: 'Paz', status: 'REQUIRES_CORRECTION', grade: '9no EGB', type: 'NEW_STUDENT', cedula: '1722839406' },
-        { email: 'apoderado@demo.com', studentName: 'Hijo', studentLastName: 'Demo', status: 'DRAFT', grade: '8vo EGB', type: 'NEW_STUDENT', cedula: '1722839407' },
+        { email: 'mateo@demo.ec', student: 'Mateo Villavicencio', status: 'MATRICULATED', grade: '1ero BGU', spec: 'BT Informática', shift: 'AFTERNOON', cedula: '1722839401' },
+        { email: 'sofia@demo.ec', student: 'Sofía Cárdenas', status: 'APPROVED', grade: '8vo EGB', spec: null, shift: 'MORNING', cedula: '1722839402' },
+        { email: 'lucas@demo.ec', student: 'Lucas Moreno', status: 'PAYMENT_UPLOADED', grade: '10mo EGB', spec: null, shift: 'AFTERNOON', cedula: '1722839403' },
+        { email: 'emma@demo.ec', student: 'Emma Salazar', status: 'UNDER_REVIEW', grade: '2do EGB', spec: null, shift: 'MORNING', cedula: '1722839404' },
+        { email: 'daniel@demo.ec', student: 'Daniel Rojas', status: 'CURSILLO_SCHEDULED', grade: '1ero BGU', spec: 'BGU Ciencias', shift: 'MORNING', cedula: '1722839405' },
+        { email: 'valentina@demo.ec', student: 'Valentina Paz', status: 'REQUIRES_CORRECTION', grade: '9no EGB', spec: null, shift: 'AFTERNOON', cedula: '1722839406' },
+        { email: 'apoderado@demo.com', student: 'David Demo', status: 'DRAFT', grade: '8vo EGB', spec: null, shift: 'MORNING', cedula: '1722839407' },
     ];
 
+    const demoPass = await hash('Demo123!');
     for (const s of scenarios) {
         const parent = await prisma.user.upsert({
             where: { email: s.email },
             update: { status: 'ACTIVO', isActive: true },
             create: {
                 email: s.email,
-                password: demoApoderadoPass,
+                password: demoPass,
                 firstName: 'Representante',
-                lastName: s.studentLastName,
+                lastName: s.student.split(' ')[1],
                 status: 'ACTIVO',
                 isActive: true,
             }
@@ -102,94 +129,79 @@ async function main() {
             create: { userId: parent.id, roleId: roles['apoderado'] },
         });
 
-        // Crear Registro Académico Histórico (Si es Antiguo)
-        if (s.type === 'RETURNING_STUDENT') {
-            await prisma.academicRecord.upsert({
-                where: { studentCedula_academicYear: { studentCedula: s.cedula, academicYear: '2024-2025' } },
-                update: {},
-                create: {
-                    studentCedula: s.cedula,
-                    academicYear: '2024-2025',
-                    gradeLevel: levels[levels.indexOf(s.grade) - 1] || '7mo EGB',
-                    finalAverage: 9.5,
-                    status: 'PASSED'
-                }
-            });
-        }
-
-        // Crear Solicitud
         const app = await prisma.application.upsert({
             where: { studentCedula: s.cedula },
-            update: { status: s.status },
+            update: { status: s.status, shift: s.shift, specialty: s.spec },
             create: {
                 userId: parent.id,
                 studentCedula: s.cedula,
-                studentFirstName: s.studentName,
-                studentLastName: s.studentLastName,
+                studentFirstName: s.student.split(' ')[0],
+                studentLastName: s.student.split(' ')[1],
                 status: s.status,
                 gradeLevel: s.grade,
-                enrollmentType: s.type,
+                enrollmentType: 'NEW_STUDENT',
                 submittedAt: s.status !== 'DRAFT' ? new Date() : null,
-                studentGender: 'M',
-                studentBirthDate: new Date('2010-01-01'),
-                studentAddress: 'Quito, Ecuador',
-                shift: 'MORNING',
-                previousSchool: s.type === 'RETURNING_STUDENT' ? 'UEFDB' : 'Colegio Externo',
-                fatherData: { names: 'Padre ' + s.studentLastName, phone: '099999999' },
-                motherData: { names: 'Madre ' + s.studentLastName, phone: '088888888' },
-                representativeData: { names: 'Representante ' + s.studentLastName, relationship: 'PADRE' },
-                paymentReference: s.status === 'PAYMENT_UPLOADED' || s.status === 'MATRICULATED' ? 'REF-12345' : null,
-                paymentAmount: s.status === 'PAYMENT_UPLOADED' || s.status === 'MATRICULATED' ? 150 : null,
+                shift: s.shift,
+                specialty: s.spec,
+                previousSchool: 'Colegio del Norte',
+                studentBirthDate: new Date('2011-05-10'),
+                fatherData: { names: 'Padre de ' + s.student, phone: '099000111' },
+                motherData: { names: 'Madre de ' + s.student, phone: '099000222' },
+                representativeData: { names: 'Rep. ' + s.student, relationship: 'PADRE' },
+                paymentReference: (s.status === 'PAYMENT_UPLOADED' || s.status === 'MATRICULATED') ? 'TRANS-9988' : null,
+                paymentAmount: (s.status === 'PAYMENT_UPLOADED' || s.status === 'MATRICULATED') ? 150 : null,
                 assignedParallel: s.status === 'MATRICULATED' ? 'A' : null,
                 processedById: s.status === 'MATRICULATED' ? userInstances['secretaria@uefdb.edu.ec'].id : null,
             }
         });
 
-        // Documentos Demo
+        // Asegurar documentos si no es borrador
         if (s.status !== 'DRAFT') {
-            await prisma.applicationDocument.createMany({
-                data: [
-                    { applicationId: app.id, documentType: 'STUDENT_PHOTO', fileName: 'foto.jpg', fileUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + s.studentName, fileSize: 1024, mimeType: 'image/svg+xml' },
-                    { applicationId: app.id, documentType: 'STUDENT_ID', fileName: 'cedula.pdf', fileUrl: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', fileSize: 1024, mimeType: 'application/pdf' },
-                ],
-                skipDuplicates: true
-            });
+            const docTypes = ['STUDENT_PHOTO', 'STUDENT_ID', 'GRADE_CERTIFICATE'];
+            for (const type of docTypes) {
+                await prisma.applicationDocument.create({
+                    data: {
+                        applicationId: app.id,
+                        documentType: type,
+                        fileName: `${type.toLowerCase()}.pdf`,
+                        fileUrl: `https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf`,
+                        fileSize: 1024 * 50,
+                        mimeType: 'application/pdf'
+                    }
+                }).catch(() => { });
+            }
         }
     }
 
-    // 5. CUPOS (TODOS LOS NIVELES LLENOS PARA EL REPORTE)
-    console.log('Generando cupos para todos los cursos...');
-    for (const level of levels) {
-        const parallels = ['A', 'B'];
-        for (const p of parallels) {
-            await prisma.admissionQuota.upsert({
-                where: { quotaIdentifier: { level, parallel: p, shift: 'MORNING', specialty: 'Ciencias', academicYear: '2026-2027' } },
-                update: { totalQuota: 30 },
-                create: { level, parallel: p, shift: 'MORNING', specialty: 'Ciencias', totalQuota: 30, academicYear: '2026-2027' }
-            });
-        }
-    }
-
-    // 6. CURSILLOS (MATERIAS Y SESIONES)
-    console.log('Generando sesiones de cursillo...');
+    // 5. SESIONES DE CURSILLO (MATERIAS)
     const cursilloData = [
-        { subject: 'Matemáticas', code: 'MATE_8VO', level: '8vo EGB' },
-        { subject: 'Lengua', code: 'LENGUA_8VO', level: '8vo EGB' },
-        { subject: 'Física', code: 'FISICA_1BGU', level: '1ero BGU' },
+        { subject: 'Matemáticas Básico', code: 'MATE_8VO', level: '8vo EGB' },
+        { subject: 'Lengua y Literatura', code: 'LENGUA_8VO', level: '8vo EGB' },
+        { subject: 'Física Superior', code: 'FISICA_1BGU', level: '1ero BGU' },
     ];
     for (const c of cursilloData) {
         await prisma.cursilloSession.upsert({
-            where: { subjectCode_gradeLevel_specialty_academicYear: { subjectCode: c.code, gradeLevel: c.level, specialty: 'Ciencias', academicYear: '2026-2027' } },
+            where: { subjectCode_gradeLevel_specialty_academicYear: { subjectCode: c.code, gradeLevel: c.level, specialty: 'BGU Ciencias', academicYear: '2026-2027' } },
             update: {},
-            create: { subject: c.subject, subjectCode: c.code, gradeLevel: c.level, specialty: 'Ciencias', academicYear: '2026-2027', isActive: true, totalSessions: 4 }
+            create: {
+                subject: c.subject,
+                subjectCode: c.code,
+                gradeLevel: c.level,
+                specialty: 'BGU Ciencias',
+                academicYear: '2026-2027',
+                isActive: true,
+                totalSessions: 4,
+                teacherName: 'Prof. Demo',
+                sessionSchedule: 'Lunes a Jueves 08:00 - 10:00'
+            }
         });
     }
 
-    // 7. CONFIGURACIÓN DEL SISTEMA
+    // 6. CONFIGURACIÓN GLOBAL
     await prisma.systemConfig.upsert({ where: { key: 'ADMISSION_OPEN' }, update: { value: 'true' }, create: { key: 'ADMISSION_OPEN', value: 'true' } });
     await prisma.systemConfig.upsert({ where: { key: 'CURRENT_ACADEMIC_YEAR' }, update: { value: '2026-2027' }, create: { key: 'CURRENT_ACADEMIC_YEAR', value: '2026-2027' } });
 
-    console.log('--- SEED COMPLETADO CON ÉXITO ---');
+    console.log('--- SEED COMPLETADO: SISTEMA LISTO PARA JURADO ---');
 }
 
 main()
