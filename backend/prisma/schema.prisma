@@ -347,6 +347,8 @@ model Notification {
   applicationId String?
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 
+  actionUrl String? // NUEVO: URL para redirección directa
+
   // Estado de lectura
   isRead Boolean   @default(false)
   readAt DateTime?
@@ -524,6 +526,29 @@ model SystemConfig {
   updatedBy String? // ID del admin que cambió la config
 
   @@map("system_configs")
+}
+
+// Form Field Configuration for dynamic form builder
+model FormFieldConfig {
+  id            String   @id @default(uuid())
+  fieldKey      String   @unique // e.g., "gradeLevel", "specialty", "relationship"
+  fieldType     String   @default("select") // text, select, checkbox, textarea, number, date, email, tel
+  label         String   // Display label in Spanish
+  section       String   // "student", "family", "academic", "health", "documents"
+  options       Json?    // Array of options for select/radio fields: [{value: "...", label: "..."}]
+  isRequired    Boolean  @default(false)
+  isEnabled     Boolean  @default(true)  // Can be disabled by admin
+  placeholder   String?
+  helpText      String?
+  validationRules Json?  // {min, max, pattern, etc}
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  updatedBy     String?  // Admin who last modified
+
+  @@index([section])
+  @@index([isEnabled])
+  @@map("form_field_configs")
 }
 
 // ========================================

@@ -17,11 +17,22 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  // CORS — allow frontend origins
+  // CORS — allow frontend origins (any localhost port for dev + env var for prod)
   app.enableCors({
-    origin: process.env.FRONTEND_URL
-      ? process.env.FRONTEND_URL.split(',')
-      : ['http://localhost:3000'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. curl, Postman)
+      if (!origin) return callback(null, true);
+      // Allow any localhost port for local development
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      // Allow configured FRONTEND_URL in production
+      const allowed = process.env.FRONTEND_URL
+        ? process.env.FRONTEND_URL.split(',')
+        : [];
+      if (allowed.includes(origin)) return callback(null, true);
+      return callback(new Error(`CORS: origin not allowed — ${origin}`));
+    },
     credentials: true,
   });
 
@@ -48,6 +59,26 @@ async function bootstrap() {
     )
     .build();
 
+  // Protect Swagger route with Basic Auth
+  app.use(['/api/docs', '/api/docs-json'], (req: any, res: any, next: any) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="API Docs"');
+      return res.status(401).send('Se requiere autenticación');
+    }
+
+    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const user = auth[0];
+    const pass = auth[1];
+
+    if (user === 'admin' && pass === 'Uefdb2026!') {
+      next();
+    } else {
+      res.setHeader('WWW-Authenticate', 'Basic realm="API Docs"');
+      return res.status(401).send('Credenciales inválidas');
+    }
+  });
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document, {
     customSiteTitle: 'Documentación API SIAM',
@@ -62,3 +93,5 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+

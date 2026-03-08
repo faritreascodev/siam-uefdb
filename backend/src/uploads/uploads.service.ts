@@ -119,7 +119,7 @@ export class UploadsService {
       data: {
         applicationId,
         documentType,
-        fileName: file.originalname,
+        fileName: file.originalname.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9.-]/g, '_'),
         fileUrl: `/uploads/applications/${applicationId}/${fileName}`,
         fileSize: file.size,
         mimeType: file.mimetype,
@@ -170,3 +170,5 @@ export class UploadsService {
     return path.join(process.cwd(), fileUrl);
   }
 }
+
+

@@ -30,11 +30,11 @@ async function main() {
       description: 'Administrador académico — gestiona admisiones, usuarios, configuración de módulos y reportes',
     },
     {
-      name: 'principal',
+      name: 'rector',
       description: 'Rector / Directivo — revisa y aprueba solicitudes, consulta reportes y supervisa el cursillo; sin acceso a gestión de usuarios ni configuración del sistema',
     },
     {
-      name: 'secretary',
+      name: 'secretaria',
       description: 'Secretaría — procesa solicitudes, valida pagos y gestiona cursillo; módulos accesibles configurables por el administrador',
     },
     {
@@ -107,7 +107,7 @@ async function main() {
       cedula: '0800000001',
     },
   });
-  await assignRole(rector.id, roles['principal']);
+  await assignRole(rector.id, roles['rector']);
 
   // secretary — day-to-day processing
   const secretary = await prisma.user.upsert({
@@ -123,7 +123,7 @@ async function main() {
       cedula: '0800000002',
     },
   });
-  await assignRole(secretary.id, roles['secretary']);
+  await assignRole(secretary.id, roles['secretaria']);
 
   // apoderado demo users (3 different scenarios for testing)
   const apoderadoDefs = [
@@ -242,7 +242,7 @@ async function main() {
       subject: 'Programación',
       subjectCode: 'PROGRAMACION',
       gradeLevel: '1ero BGU',
-      specialty: 'Técnico Informática',
+      specialty: 'BT Informática',
       teacherName: 'Por asignar',
       teacherEmail: null,
       description: 'Lógica de programación, algoritmos y pseudocódigo',
@@ -480,6 +480,26 @@ async function main() {
     }
 
     createdApps[data.studentCedula!] = app;
+
+    // Add a default student photo for demo purposes
+    const existingPhoto = await prisma.applicationDocument.findFirst({
+      where: { applicationId: app.id, documentType: 'STUDENT_PHOTO' }
+    });
+
+    if (!existingPhoto) {
+      await prisma.applicationDocument.create({
+        data: {
+          applicationId: app.id,
+          documentType: 'STUDENT_PHOTO',
+          fileName: 'foto_estudiante.png',
+          fileUrl: app.studentFirstName === 'Valentina'
+            ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina&backgroundColor=b6e3f4'
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${app.studentFirstName}&backgroundColor=c0aede`,
+          fileSize: 1024 * 50,
+          mimeType: 'image/svg+xml',
+        }
+      });
+    }
   }
 
   console.log(`Demo applications: ${demoApplications.length}`);
@@ -524,35 +544,39 @@ async function main() {
   // ─────────────────────────────────────────────────────────────
   // 6. ADMISSION QUOTAS (2026-2027)
   // ─────────────────────────────────────────────────────────────
-  const quotas = [
-    // 8vo EGB
-    { level: '8vo EGB', parallel: 'A', shift: 'Matutina', specialty: null, totalQuota: 30 },
-    { level: '8vo EGB', parallel: 'B', shift: 'Matutina', specialty: null, totalQuota: 30 },
-    { level: '8vo EGB', parallel: 'C', shift: 'Matutina', specialty: null, totalQuota: 30 },
-    { level: '8vo EGB', parallel: 'A', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    { level: '8vo EGB', parallel: 'B', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    // 9no EGB
-    { level: '9no EGB', parallel: 'A', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    { level: '9no EGB', parallel: 'B', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    // 10mo EGB
-    { level: '10mo EGB', parallel: 'A', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    { level: '10mo EGB', parallel: 'B', shift: 'Vespertina', specialty: null, totalQuota: 30 },
-    // 1ro BGU — Ciencias (morning + afternoon)
-    { level: '1ero BGU', parallel: 'A', shift: 'Matutina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '1ero BGU', parallel: 'B', shift: 'Matutina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '1ero BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '1ero BGU', parallel: 'B', shift: 'Vespertina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    // 1ro BGU — BT Informática (afternoon only)
-    { level: '1ero BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BT Informática', totalQuota: 35 },
-    { level: '1ero BGU', parallel: 'B', shift: 'Vespertina', specialty: 'BT Informática', totalQuota: 35 },
-    // 2do BGU
-    { level: '2do BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '2do BGU', parallel: 'B', shift: 'Vespertina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '2do BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BT Informática', totalQuota: 35 },
-    // 3ro BGU
-    { level: '3ero BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BGU Ciencias', totalQuota: 30 },
-    { level: '3ero BGU', parallel: 'A', shift: 'Vespertina', specialty: 'BT Informática', totalQuota: 35 },
+  const levels = [
+    'Inicial 1', 'Inicial 2', '1ero EGB', '2do EGB', '3ro EGB',
+    '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB',
+    '9no EGB', '10mo EGB', '1ero BGU', '2do BGU', '3ero BGU'
   ];
+
+  const quotas: any[] = [];
+
+  for (const level of levels) {
+    if (level.includes('BGU')) {
+      const specialties = level === '1ero BGU' ? ['BGU Ciencias', 'BT Informática'] : ['BGU Ciencias'];
+      for (const spec of specialties) {
+        const shifts = spec === 'BT Informática' ? ['Vespertina'] : ['Matutina', 'Vespertina'];
+        for (const shift of shifts) {
+          quotas.push({ level, parallel: 'A', shift, specialty: spec, totalQuota: 30 });
+          quotas.push({ level, parallel: 'B', shift, specialty: spec, totalQuota: 30 });
+        }
+      }
+    } else {
+      // General EGB and Inicial
+      const shifts = level.includes('8vo') || level.includes('9no') || level.includes('10mo')
+        ? ['Matutina', 'Vespertina']
+        : ['Matutina'];
+
+      for (const shift of shifts) {
+        quotas.push({ level, parallel: 'A', shift, specialty: null, totalQuota: 35 });
+        quotas.push({ level, parallel: 'B', shift, specialty: null, totalQuota: 35 });
+        if (level === '8vo EGB' || level === '1ero EGB') {
+          quotas.push({ level, parallel: 'C', shift, specialty: null, totalQuota: 35 });
+        }
+      }
+    }
+  }
 
   for (const q of quotas) {
     const existing = await (prisma as any).admissionQuota.findFirst({
@@ -629,6 +653,41 @@ async function main() {
       }),
       description: 'Módulos del panel habilitados para secretaría',
     },
+    // Form Config Data
+    {
+      key: 'FORM_GRADES',
+      value: JSON.stringify([
+        { value: 'Inicial 1', label: 'Inicial 1 (3 años)', isBGU: false, requiresCursillo: false },
+        { value: 'Inicial 2', label: 'Inicial 2 (4 años)', isBGU: false, requiresCursillo: false },
+        { value: '1ero EGB', label: '1ro Básico', isBGU: false, requiresCursillo: false },
+        { value: '2do EGB', label: '2do Básico', isBGU: false, requiresCursillo: false },
+        { value: '3ro EGB', label: '3ro Básico', isBGU: false, requiresCursillo: false },
+        { value: '4to EGB', label: '4to Básico', isBGU: false, requiresCursillo: false },
+        { value: '5to EGB', label: '5to Básico', isBGU: false, requiresCursillo: false },
+        { value: '6to EGB', label: '6to Básico', isBGU: false, requiresCursillo: false },
+        { value: '7mo EGB', label: '7mo Básico', isBGU: false, requiresCursillo: false },
+        { value: '8vo EGB', label: '8vo Básico', isBGU: false, requiresCursillo: true },
+        { value: '9no EGB', label: '9no Básico', isBGU: false, requiresCursillo: false },
+        { value: '10mo EGB', label: '10mo Básico', isBGU: false, requiresCursillo: false },
+        { value: '1ero BGU', label: '1ro Bachillerato', isBGU: true, requiresCursillo: true },
+        { value: '2do BGU', label: '2do Bachillerato', isBGU: true, requiresCursillo: false },
+        { value: '3ro BGU', label: '3ro Bachillerato', isBGU: true, requiresCursillo: false }
+      ]),
+      description: 'Grados disponibles en el sistema',
+    },
+    {
+      key: 'FORM_SPECIALTIES',
+      value: JSON.stringify([
+        { value: 'BGU Ciencias', label: 'BGU Ciencias', afternoonOnly: false },
+        { value: 'BT Informática', label: 'BT Informática', afternoonOnly: true }
+      ]),
+      description: 'Especialidades de Bachillerato',
+    },
+    {
+      key: 'FORM_RELATIONSHIPS',
+      value: JSON.stringify(['Padre', 'Madre', 'Abuelo/a', 'Tío/a', 'Tutor Legal', 'Otro']),
+      description: 'Opciones de parentesco',
+    },
   ];
 
   for (const c of configs) {
@@ -669,3 +728,4 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+

@@ -13,3 +13,5 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     console.log('❌ Disconnected from database');
   }
 }
+
+

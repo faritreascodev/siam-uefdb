@@ -15,37 +15,39 @@ export class ExtraContactsController {
   constructor(private readonly extraContactsService: ExtraContactsService) {}
 
   @Post()
-  @Roles('apoderado', 'secretary', 'admin', 'principal', 'superadmin')
+  @Roles('apoderado', 'secretaria', 'admin', 'rector', 'superadmin')
   @ApiOperation({ summary: 'Creates a new extra contact for a student application (Max 3)' })
   create(@Body() createExtraContactDto: CreateExtraContactDto) {
     return this.extraContactsService.create(createExtraContactDto);
   }
 
   @Get('application/:applicationId')
-  @Roles('apoderado', 'secretary', 'admin', 'principal', 'superadmin')
+  @Roles('apoderado', 'secretaria', 'admin', 'rector', 'superadmin')
   @ApiOperation({ summary: 'Gets all extra contacts for a specific application' })
   findAllByApplication(@Param('applicationId') applicationId: string) {
     return this.extraContactsService.findAllByApplication(applicationId);
   }
 
   @Get(':id')
-  @Roles('apoderado', 'secretary', 'admin', 'principal', 'superadmin')
+  @Roles('apoderado', 'secretaria', 'admin', 'rector', 'superadmin')
   @ApiOperation({ summary: 'Gets a specific extra contact by ID' })
   findOne(@Param('id') id: string) {
     return this.extraContactsService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles('apoderado', 'secretary', 'admin', 'principal', 'superadmin')
+  @Roles('apoderado', 'secretaria', 'admin', 'rector', 'superadmin')
   @ApiOperation({ summary: 'Updates an existing extra contact' })
   update(@Param('id') id: string, @Body() updateExtraContactDto: UpdateExtraContactDto) {
     return this.extraContactsService.update(id, updateExtraContactDto);
   }
 
   @Delete(':id')
-  @Roles('apoderado', 'secretary', 'admin', 'principal', 'superadmin')
+  @Roles('apoderado', 'secretaria', 'admin', 'rector', 'superadmin')
   @ApiOperation({ summary: 'Deletes an extra contact' })
   remove(@Param('id') id: string) {
     return this.extraContactsService.remove(id);
   }
 }
+
+
