@@ -24,7 +24,7 @@ import {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { hasAdminAccess, isApoderado, isDirectivo, isSecretary, roles } = useRoles();
+  const { hasAdminAccess, isApoderado, isDirectivo, isSecretaria, roles } = useRoles();
 
   if (status === "loading") {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Cargando panel...</div>;
@@ -230,7 +230,7 @@ export default function DashboardPage() {
               )}
 
               {/* Secretaria - Solicitudes recibidas */}
-              {isSecretary() && (
+              {isSecretaria() && (
                 <Link href="/admin/admisiones" className="group">
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-blue-50/10">
                     <CardHeader>
@@ -273,7 +273,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Mensaje informativo si no tiene acceso a nada especial */}
-            {!hasAdminAccess() && !isApoderado() && !isDirectivo() && !isSecretary() && (
+            {!hasAdminAccess() && !isApoderado() && !isDirectivo() && !isSecretaria() && (
               <Card className="bg-amber-50 border-amber-200">
                 <CardContent className="pt-6 flex items-start gap-4">
                   <Info className="h-5 w-5 text-amber-600 mt-0.5" />

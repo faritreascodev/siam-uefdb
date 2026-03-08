@@ -7,7 +7,12 @@ export type NotificationType =
   | 'APPLICATION_APPROVED'
   | 'APPLICATION_REJECTED'
   | 'APPLICATION_UNDER_REVIEW'
-  | 'DOCUMENT_REQUIRED';
+  | 'APPLICATION_UNDER_REVIEW'
+  | 'DOCUMENT_REQUIRED'
+  | 'MATRICULATED'
+  | 'PAYMENT_UPLOADED'
+  | 'PAYMENT_VALIDATED'
+  | 'PAYMENT_REJECTED';
 
 export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
@@ -19,6 +24,7 @@ export interface Notification {
   title: string;
   message: string;
   applicationId?: string;
+  actionUrl?: string;
   application?: {
     id: string;
     studentFirstName: string;

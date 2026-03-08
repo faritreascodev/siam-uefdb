@@ -17,8 +17,8 @@ export function useRoles() {
   // Individual role checkers
   const isSuperAdmin = () => has("superadmin");
   const isAdmin = () => has("admin");
-  const isPrincipal = () => has("principal");   // Rector / Directivo
-  const isSecretary = () => has("secretary");
+  const isRector = () => has("rector");   // Rector / Directivo
+  const isSecretaria = () => has("secretaria");
   const isApoderado = () => has("apoderado");
 
   // Convenience groups
@@ -26,7 +26,7 @@ export function useRoles() {
   const isFullAdmin = () => isSuperAdmin() || isAdmin();
 
   /** Can access the admin layout but with restricted menus */
-  const hasAdminAccess = () => isSuperAdmin() || isAdmin() || isPrincipal() || isSecretary();
+  const hasAdminAccess = () => isSuperAdmin() || isAdmin() || isRector() || isSecretaria();
 
   /** Can manage system-level settings (SMTP, security, etc.) — superadmin only */
   const canManageSystem = () => isSuperAdmin();
@@ -41,13 +41,13 @@ export function useRoles() {
   const canViewAudit = () => isSuperAdmin() || isAdmin();
 
   /** Can approve / reject applications */
-  const canApproveApplications = () => isSuperAdmin() || isAdmin() || isPrincipal() || isSecretary();
+  const canApproveApplications = () => isSuperAdmin() || isAdmin() || isRector() || isSecretaria();
 
   /** Can access system config page */
   const canAccessSettings = () => isSuperAdmin() || isAdmin();
 
   /** Can view cursillo module (admin panel) */
-  const canManageCursillo = () => isSuperAdmin() || isAdmin() || isPrincipal() || isSecretary();
+  const canManageCursillo = () => isSuperAdmin() || isAdmin() || isRector() || isSecretaria();
 
   return {
     roles,
@@ -56,12 +56,12 @@ export function useRoles() {
     // Individual checkers
     isSuperAdmin,
     isAdmin,
-    isPrincipal,
-    isSecretary,
+    isRector,
+    isSecretaria,
     isApoderado,
 
     // Legacy aliases (keep old names to avoid breaking existing code)
-    isDirectivo: isPrincipal,
+    isDirectivo: isRector,
 
     // Group helpers
     isFullAdmin,
@@ -77,3 +77,4 @@ export function useRoles() {
     canManageCursillo,
   };
 }
+

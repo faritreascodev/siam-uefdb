@@ -17,19 +17,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import { registerSchema, RegisterFormValues, Parentesco } from "@/lib/schemas/register.schema";
+import { registerSchema, RegisterFormValues } from "@/lib/schemas/register.schema";
 import { registerUser } from "@/lib/api-auth";
 
-interface RegisterFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface RegisterFormProps extends React.HTMLAttributes<HTMLDivElement> { }
 
 export function RegisterForm({ className, ...props }: RegisterFormProps) {
   const router = useRouter();
@@ -46,11 +39,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
       password: "",
       confirmPassword: "",
       firstName: "",
-      lastName: "",
-      cedula: "",
-      telefono: "",
-      direccion: "",
-      parentesco: undefined,
+      lastName: ""
     },
   });
 
@@ -76,7 +65,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
   if (success) {
     return (
       <div className={cn("grid gap-6", className)} {...props}>
-         <Alert className="border-green-500 bg-green-50 text-green-900">
+        <Alert className="border-green-500 bg-green-50 text-green-900">
           <AlertTitle className="mb-2 text-lg font-bold">Registration Successful!</AlertTitle>
           <AlertDescription>
             <p>{success}</p>
@@ -95,7 +84,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
     <div className={cn("grid gap-6", className)} {...props}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          
+
           {error && (
             <Alert variant="destructive">
               <AlertTitle>Error</AlertTitle>
@@ -132,19 +121,7 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="cedula"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Cédula</FormLabel>
-                <FormControl>
-                  <Input placeholder="0999999999" maxLength={10} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
 
           <FormField
             control={form.control}
@@ -160,127 +137,75 @@ export function RegisterForm({ className, ...props }: RegisterFormProps) {
             )}
           />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Contraseña</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        placeholder="********"
-                        type={showPassword ? "text" : "password"}
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="sr-only">Toggle password visibility</span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmar Contraseña</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        placeholder="********"
-                        type={showConfirmPassword ? "text" : "password"}
-                        {...field}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span className="sr-only">Toggle password visibility</span>
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-             <FormField
-              control={form.control}
-              name="telefono"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teléfono</FormLabel>
-                  <FormControl>
-                    <Input placeholder="099..." {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="parentesco"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Parentesco</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccione..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Object.values(Parentesco).map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {p.replace('_', ' ')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-           <FormField
+          <FormField
             control={form.control}
-            name="direccion"
+            name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Dirección</FormLabel>
+                <FormLabel>Contraseña</FormLabel>
                 <FormControl>
-                  <Input placeholder="Av. Principal 123" {...field} />
+                  <div className="relative">
+                    <Input
+                      placeholder="********"
+                      type={showPassword ? "text" : "password"}
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="sr-only">Toggle password visibility</span>
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Confirmar Contraseña</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      placeholder="********"
+                      type={showConfirmPassword ? "text" : "password"}
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <span className="sr-only">Toggle password visibility</span>
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

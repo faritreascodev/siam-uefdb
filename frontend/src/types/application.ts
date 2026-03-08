@@ -90,6 +90,7 @@ export interface Application {
   studentSector?: string;
   studentPhone?: string;
   studentEmail?: string;
+  studentPhotoUrl?: string;
 
   // Datos Médicos
   bloodType?: string;
