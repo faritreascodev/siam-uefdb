@@ -5,6 +5,7 @@
         "test",
         "dist",
         "**/*spec.ts",
-        "prisma/**/*.ts"
+        "prisma/**/*.ts",
+        "test-academics.ts"
     ]
 }
