@@ -105,45 +105,45 @@ export class QuotasService {
    */
   async seed() {
     // Explicitly type the array to avoid union type issues
-    const quotasSeed: { level: string; parallel: string; shift: string; specialty: string | null; totalQuota: number }[] = [
-      // Inicial - Matutina
-      { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 30 },
-      { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Matutina", specialty: null, totalQuota: 35 },
-
-      // Inicial - Vespertina
-      { level: "Inicial 1 (3 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
-      { level: "Inicial 2 (4 años)", parallel: "Único", shift: "Vespertina", specialty: null, totalQuota: 35 },
-
-      // EGB Elemental & Media (1ero a 7mo) - Vespertina
-      ...["1ero EGB", "2do EGB", "3ro EGB", "4to EGB", "5to EGB", "6to EGB", "7mo EGB"].flatMap(level => [
-        { level, parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
-        { level, parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 }
-      ]),
-
-      // 8vo EGB - Matutina
-      { level: "8vo EGB", parallel: "A", shift: "Matutina", specialty: null, totalQuota: 30 },
-      { level: "8vo EGB", parallel: "B", shift: "Matutina", specialty: null, totalQuota: 30 },
-
-      // 8vo, 9no, 10mo EGB - Vespertina
-      ...["8vo EGB", "9no EGB", "10mo EGB"].flatMap(level => [
-        { level, parallel: "A", shift: "Vespertina", specialty: null, totalQuota: 30 },
-        { level, parallel: "B", shift: "Vespertina", specialty: null, totalQuota: 30 }
-      ]),
-
-      // Bachillerato - Ciencias (1ero, 2do, 3ro) - Vespertina
-      ...["1ero BGU", "2do BGU", "3ro BGU"].flatMap(level => [
-        { level, parallel: "A", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 },
-        { level, parallel: "B", shift: "Vespertina", specialty: "Ciencias", totalQuota: 20 }
-      ]),
-
-      // Bachillerato - Técnico (1ero, 2do, 3ro) - Vespertina
-      ...["1ero BGU", "2do BGU", "3ro BGU"].flatMap(level => [
-        { level, parallel: "A", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 },
-        { level, parallel: "B", shift: "Vespertina", specialty: "Técnico Informática", totalQuota: 20 }
-      ]),
+    const levels = [
+      'Inicial 1', 'Inicial 2', '1ero EGB', '2do EGB', '3ro EGB',
+      '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB',
+      '9no EGB', '10mo EGB', '1ero BGU', '2do BGU', '3ro BGU'
     ];
 
+    const quotasSeed: any[] = [];
+
+    for (const level of levels) {
+      const shifts = ['Matutina', 'Vespertina'];
+      const parallels = level.startsWith('Inicial') ? ['Único'] : ['A', 'B', 'C'];
+
+      for (const shift of shifts) {
+        let specialties: (string | null)[] = [null];
+        if (level.includes('BGU')) {
+          specialties = ['BGU Ciencias'];
+          if (shift === 'Vespertina') {
+            specialties.push('Técnico en Informática');
+          }
+        }
+
+        for (const spec of specialties) {
+          for (const p of parallels) {
+            quotasSeed.push({
+              level,
+              parallel: p,
+              shift,
+              specialty: spec,
+              totalQuota: 30
+            });
+          }
+        }
+      }
+    }
+
     let createdCount = 0;
+
+    // Limpiar configuraciones previas para evitar duplicados y nombres antiguos
+    await this.prisma.admissionQuota.deleteMany({});
 
     for (const quota of quotasSeed) {
       const existing = await this.prisma.admissionQuota.findFirst({

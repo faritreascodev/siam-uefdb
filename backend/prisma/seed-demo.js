@@ -62,7 +62,16 @@ async function main() {
         });
     }
 
-    // 3. CATALOGO DE CURSOS Y CUPOS COMPLETOS
+    // 3. ELIMINAR DATOS TRANSACCIONALES (DEJAR SISTEMA LIMPIO)
+    console.log('Limpiando datos transaccionales previos...');
+    await prisma.admissionQuota.deleteMany({});
+    await prisma.applicationDocument.deleteMany({});
+    await prisma.cursilloEnrollment.deleteMany({});
+    await prisma.application.deleteMany({});
+    await prisma.cursilloSession.deleteMany({});
+    await prisma.academicRecord.deleteMany({});
+
+    // 4. CATALOGO DE CURSOS Y CUPOS COMPLETOS
     const levels = [
         'Inicial 1', 'Inicial 2', '1ero EGB', '2do EGB', '3ro EGB',
         '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB',
@@ -107,15 +116,6 @@ async function main() {
             }
         }
     }
-
-    // 4. ELIMINAR SOLICITUDES Y DATOS TRANSACCIONALES (DEJAR SISTEMA LIMPIO)
-    console.log('Limpiando solicitudes y datos transaccionales previos...');
-    await prisma.admissionQuota.deleteMany({});
-    await prisma.applicationDocument.deleteMany({});
-    await prisma.cursilloEnrollment.deleteMany({});
-    await prisma.application.deleteMany({});
-    await prisma.cursilloSession.deleteMany({});
-    await prisma.academicRecord.deleteMany({});
 
     // 5. CONFIGURACIÓN GLOBAL
     await prisma.systemConfig.upsert({
