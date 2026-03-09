@@ -67,7 +67,10 @@ async function main() {
     await prisma.admissionQuota.deleteMany({});
     await prisma.applicationDocument.deleteMany({});
     await prisma.cursilloEnrollment.deleteMany({});
-    await prisma.application.deleteMany({});
+    // No borrar borradores de usuarios finales
+    await prisma.application.deleteMany({
+        where: { status: { not: 'DRAFT' } }
+    });
     await prisma.cursilloSession.deleteMany({});
     await prisma.academicRecord.deleteMany({});
 

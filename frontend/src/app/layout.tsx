@@ -18,6 +18,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/assets/logo-uefdb.ico" sizes="any" />
+      </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
           {children}
