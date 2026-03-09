@@ -1009,8 +1009,8 @@ export class ApplicationsService {
         level: application.gradeLevel,
         shift: application.shift as any,
         parallel: parallel,
-        // specialty: application.specialty || undefined 
-        // Nota: Ajustar query de especialidad según modelo exacto
+        specialty: application.specialty || null,
+        academicYear: '2026-2027' // Año actual del seed
       }
     });
 

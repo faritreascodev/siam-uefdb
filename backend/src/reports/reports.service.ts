@@ -168,10 +168,10 @@ export class ReportsService {
       return shift || 'Sin jornada';
     };
     const mapSpecialty = (sp: string | null) => {
-      if (!sp || sp === 'none' || sp === '-') return null;
+      if (!sp || sp === 'none' || sp === '-' || sp === 'NA') return null;
       const s = sp.toUpperCase();
       if (s.includes('CIENCIAS')) return 'BGU Ciencias';
-      if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA')) return 'Técnico en Informática';
+      if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA') || s.includes('TÉCNICO')) return 'Técnico en Informática';
       return sp;
     };
 
@@ -221,12 +221,14 @@ export class ReportsService {
     // 5. Convertir a array y ordenar
     return Array.from(statsMap.values()).map(s => ({
       ...s,
+      specialty: s.specialty || '-',
       occupied: s.approved,
       available: Math.max(0, s.totalQuota - s.approved)
     })).sort((a, b) => {
       const levelCompare = a.level.localeCompare(b.level, undefined, { numeric: true });
       if (levelCompare !== 0) return levelCompare;
-      return a.shift.localeCompare(b.shift);
+      if (a.shift !== b.shift) return a.shift.localeCompare(b.shift);
+      return (a.specialty || '').localeCompare(b.specialty || '');
     });
   }
 }

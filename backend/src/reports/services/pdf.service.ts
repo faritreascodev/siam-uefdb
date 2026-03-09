@@ -81,10 +81,12 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
     const map: Record<string, string> = {
       // Formato nuevo
       'Ciencias': 'BGU Ciencias',
-      'Técnico Informática': 'BGU Técnico en Informática',
+      'BGU Ciencias': 'BGU Ciencias',
+      'Técnico en Informática': 'BT Informática',
+      'Técnico Informática': 'BT Informática',
       // Formato legado
       'CIENCIAS': 'BGU Ciencias',
-      'TECNICO_INFORMATICA': 'BGU Técnico en Informática',
+      'TECNICO_INFORMATICA': 'BT Informática',
     };
     return map[s] || s;
   }
@@ -256,8 +258,13 @@ export class PdfService implements OnModuleInit, OnModuleDestroy {
     ${row('Especialidad', this.specialtyLabel(app.specialty))}
     ${row('Institución de Procedencia', app.previousSchool || '—')}
     ${row('Promedio Año Anterior', app.lastYearAverage != null ? Number(app.lastYearAverage).toFixed(2) : '—')}
-    ${app.assignedParallel ? row('Paralelo Asignado', app.assignedParallel) : ''}
+    ${row('Paralelo Asignado', app.assignedParallel || '—')}
   `)}
+
+  <!-- CONTACTOS DE EMERGENCIA -->
+  ${app.extraContacts && app.extraContacts.length > 0 ? `
+  ${sectionTitle('CONTACTOS EN CASO DE EMERGENCIA', '#991b1b')}
+  ${table(app.extraContacts.map((c: any) => row(`${c.relationship}: ${c.firstName} ${c.lastName}`, c.phone)).join(''))}` : ''}
 
   <!-- REPRESENTANTE LEGAL -->
   ${sectionTitle('REPRESENTANTE LEGAL', '#065f46')}
