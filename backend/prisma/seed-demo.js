@@ -66,13 +66,13 @@ async function main() {
     const levels = [
         'Inicial 1', 'Inicial 2', '1ero EGB', '2do EGB', '3ro EGB',
         '4to EGB', '5to EGB', '6to EGB', '7mo EGB', '8vo EGB',
-        '9no EGB', '10mo EGB', '1ero BGU', '2do BGU', '3ero BGU'
+        '9no EGB', '10mo EGB', '1ero BGU', '2do BGU', '3ro BGU'
     ];
 
     console.log('Generando cupos para todos los cursos (Matutina y Vespertina)...');
     for (const level of levels) {
         const shifts = ['Matutina', 'Vespertina'];
-        const parallels = ['A', 'B'];
+        const parallels = level.startsWith('Inicial') ? ['Único'] : ['A', 'B', 'C'];
 
         for (const shift of shifts) {
             // Lógica de Especialidades

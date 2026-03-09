@@ -46,13 +46,20 @@ export class ReportsService {
       where: { ...where, status: 'MATRICULATED' },
     });
 
+    const totalProcessed = approved + rejected;
+    const approvalRate = totalProcessed > 0 ? Math.round((approved / totalProcessed) * 100) : 0;
+
     return {
+      totalApplications: total,
+      pendingReview: submitted + pendingReview,
+      approved,
+      rejected,
+      approvalRate,
+      // Otros campos para compatibilidad
       total,
       draft,
       submitted,
       underReview: pendingReview,
-      approved,
-      rejected,
       matriculated
     };
   }
