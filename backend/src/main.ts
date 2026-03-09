@@ -9,8 +9,19 @@ import helmet from 'helmet';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Security HTTP headers
-  app.use(helmet());
+  // Security HTTP headers with relaxed CSP for Dokploy/Production
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "blob:", "*"], // Allow all images (or narrow to specific domains)
+        connectSrc: ["'self'", "*"], // Allow all connections (or narrow to specific domains)
+      },
+    },
+    crossOriginResourcePolicy: false,
+  }));
 
   // Static file serving (uploaded documents / payment receipts)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {

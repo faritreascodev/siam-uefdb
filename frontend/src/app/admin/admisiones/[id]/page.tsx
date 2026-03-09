@@ -353,6 +353,41 @@ export default function ApplicationDetailPage({ params }: Props) {
           </div>
         </TabsContent>
 
+        <TabsContent value="documents" className="mt-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Documentos Adjuntos</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {application.documents?.map((doc) => (
+                  <div key={doc.id} className="border p-4 rounded-lg flex flex-col gap-3 bg-slate-50 hover:border-primary transition-colors hover:shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                        <FileText className="h-5 w-5" />
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="text-sm font-semibold truncate" title={DOCUMENT_LABELS[doc.documentType] || doc.documentType}>
+                          {DOCUMENT_LABELS[doc.documentType] || doc.documentType}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">{doc.fileName}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-auto">
+                      <Button size="sm" variant="outline" className="flex-1 h-8" asChild>
+                        <a href={getFileUrl(doc.fileUrl)} target="_blank" rel="noreferrer">
+                          <Eye className="h-3.5 w-3.5 mr-1" /> Ver archivo
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {(!application.documents || application.documents.length === 0) && (
+                  <div className="text-center py-10 text-muted-foreground italic col-span-full">No hay documentos subidos.</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="cursillo" className="mt-4">
           <Card>
             <CardHeader>

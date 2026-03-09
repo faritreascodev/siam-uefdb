@@ -37,7 +37,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
   const [formGrades, setFormGrades] = useState<any[]>(GRADE_LEVELS);
   const [formSpecialties, setFormSpecialties] = useState<any[]>([
     { value: 'BGU Ciencias', label: 'BGU Ciencias', afternoonOnly: false },
-    { value: 'Técnico en Informática', label: 'Técnico en Informática', afternoonOnly: true }
+    { value: 'BT Informática', label: 'BT Informática', afternoonOnly: true }
   ]);
   const [bguGrades, setBguGrades] = useState<string[]>(BGU_GRADES);
   const [cursilloGrades, setCursilloGrades] = useState<string[]>(CURSILLO_GRADES);
@@ -191,7 +191,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 value={data.specialty || ''}
                 onValueChange={(value) => {
                   handleChange('specialty', value);
-                  if (value === 'Técnico en Informática') {
+                  if (value === 'BT Informática') {
                     handleChange('shift', 'Vespertina');
                   }
                 }}
@@ -216,19 +216,19 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
             <Select
               value={data.shift || ''}
               onValueChange={(value) => handleChange('shift', value as Shift)}
-              disabled={data.specialty === 'Técnico en Informática'}
+              disabled={data.specialty === 'BT Informática'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar jornada" />
               </SelectTrigger>
               <SelectContent>
-                {data.specialty !== 'Técnico en Informática' && (
+                {data.specialty !== 'BT Informática' && (
                   <SelectItem value="Matutina">Matutina</SelectItem>
                 )}
                 <SelectItem value="Vespertina">Vespertina</SelectItem>
               </SelectContent>
             </Select>
-            {data.specialty === 'Técnico en Informática' && (
+            {data.specialty === 'BT Informática' && (
               <p className="text-xs text-muted-foreground mt-1">
                 La especialidad 'BT Informática' se imparte únicamente en la jornada Vespertina.
               </p>
