@@ -78,6 +78,7 @@ SUPERADMIN (Mayor privilegio)
 - Incluido: Programar sesiones de cursillo
 - Incluido: Asignación de paralelos a estudiantes admitidos
 - Incluido: Gestión de contactos adicionales de emergencia
+- Incluido: Búsqueda avanzada de solicitudes (nombres, apellidos, cédula)
 - Incluido: Módulos configurables:
   - Dashboard
   - Admisiones
@@ -108,6 +109,7 @@ SUPERADMIN (Mayor privilegio)
 - Incluido: Ver estado de sus solicitudes
 - Incluido: Responder a solicitudes de corrección
 - Incluido: Cargar comprobante de pago
+- Incluido: Validación precoz de cupos (alertas de disponibilidad en tiempo real)
 - Incluido: Gestionar hasta 3 contactos adicionales de emergencia por estudiante
 - Restringido: NO puede ver solicitudes de otros apoderados
 - Restringido: NO tiene acceso al panel administrativo
@@ -259,5 +261,5 @@ Esta funcionalidad permite que el sistema se adapte a:
 
 ---
 
-**Última actualización:** 7 de marzo de 2026
-**Sistema:** SIAM UEFDB v3.2 (Demo Ready)
+**Última actualización:** 9 de marzo de 2026
+**Sistema:** SIAM UEFDB v3.2 (Demo Ready - Build 2026.03.09)
