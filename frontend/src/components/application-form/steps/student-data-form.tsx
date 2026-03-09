@@ -37,8 +37,9 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
 
   const handleSearchCedula = async () => {
     const cedula = data.studentCedula;
-    if (!cedula || cedula.length !== 10) {
-      toast.error('Ingrese una cédula válida de 10 dígitos');
+    const isEcuadorian = data.studentNationality?.toUpperCase().includes('ECUA') || !data.studentNationality;
+    if (isEcuadorian && (!cedula || cedula.length < 10)) {
+      toast.error('Ingrese una cédula ecuatoriana válida (10 dígitos)');
       return;
     }
 
@@ -159,8 +160,7 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
               id="studentCedula"
               value={data.studentCedula || ''}
               onChange={(e) => handleChange('studentCedula', e.target.value)}
-              placeholder="1234567890"
-              maxLength={10}
+              placeholder="Ej: 1234567890 o Pasaporte"
             />
             <div className="flex justify-end">
               <Button
@@ -168,7 +168,7 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
                 variant="outline"
                 size="sm"
                 onClick={handleSearchCedula}
-                disabled={searching || !data.studentCedula || data.studentCedula.length < 10}
+                disabled={searching || !data.studentCedula || (data.studentNationality?.toUpperCase().includes('ECUA') && data.studentCedula.length < 10)}
                 className="mt-1"
               >
                 {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}

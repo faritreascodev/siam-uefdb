@@ -67,8 +67,42 @@ export const ECUADOR_LOCATIONS: LocationData = {
     {
       name: "Esmeraldas",
       cantons: [
-        { name: "Esmeraldas", parishes: ["Bartolomé Ruiz", "Luis Tello", "Simón Plata"] },
-        { name: "Atacames", parishes: ["Atacames", "Súa", "Tonchigüe"] }
+        {
+          name: "Cantón Esmeraldas (Capital)",
+          parishes: [
+            "5 de Agosto", "Bartolomé Ruiz", "Esmeraldas", "Luis Tello", "Simón Plata Torres",
+            "Camarones", "Coronel Carlos Concha Torres", "Chinca", "Majua", "San Mateo", "Tabiazo", "Tachina", "Vuelta Larga"
+          ]
+        },
+        {
+          name: "Cantón Atacames",
+          parishes: ["Atacames", "La Unión", "Súa", "Tonchigüe", "Tonsupa"]
+        },
+        {
+          name: "Cantón Eloy Alfaro",
+          parishes: [
+            "Valdez (Limones)", "Anchayacu", "Atahualpa", "Borbón", "Colón Eloy del María", "La Tola", "Luis Vargas Torres (Playa de Oro)",
+            "Maldonado", "Pampanal de Bolívar", "San Francisco de Onzole", "San José de Cayapas", "Santo Domingo de Onzole", "Selva Alegre", "Telembí", "Timbiré", "Santa Lucía de las Peñas"
+          ]
+        },
+        {
+          name: "Cantón Muisne",
+          parishes: ["Muisne", "Bolívar", "Daule", "Galera", "Quingüe", "Salima", "San Francisco del Cabo", "San Gregorio", "San José de Chamanga"]
+        },
+        {
+          name: "Cantón Quinindé",
+          parishes: ["Rosa Zárate", "Cube", "Chura", "Malimpia", "Viche", "La Unión"]
+        },
+        {
+          name: "Cantón Rioverde",
+          parishes: ["Rioverde", "Chontaduro", "Chumundé", "Lagarto", "Montalvo", "Rocafuerte"]
+        },
+        {
+          name: "Cantón San Lorenzo",
+          parishes: [
+            "San Lorenzo", "Alto Tambo", "Ancón (Palma Real)", "Calderón", "Carondelet", "5 de Junio (Uimbi)", "Concepción", "Mataje", "San Javier de Cachabí", "Santa Rita", "Tambillo", "Tululbí (Ricaurte)", "Urbina"
+          ]
+        }
       ]
     },
     {
