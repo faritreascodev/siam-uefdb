@@ -17,10 +17,18 @@ export class ReportsService {
       }
     }
 
-    const totalApplications = await this.prisma.application.count({ where });
+    const total = await this.prisma.application.count({ where });
+
+    const draft = await this.prisma.application.count({
+      where: { ...where, status: 'DRAFT' },
+    });
+
+    const submitted = await this.prisma.application.count({
+      where: { ...where, status: 'SUBMITTED' },
+    });
 
     const pendingReview = await this.prisma.application.count({
-      where: { ...where, status: 'SUBMITTED' },
+      where: { ...where, status: 'UNDER_REVIEW' },
     });
 
     const approved = await this.prisma.application.count({
@@ -39,8 +47,10 @@ export class ReportsService {
     });
 
     return {
-      totalApplications,
-      pendingReview,
+      total,
+      draft,
+      submitted,
+      underReview: pendingReview,
       approved,
       rejected,
       matriculated
@@ -111,40 +121,25 @@ export class ReportsService {
   }
 
   async getStatsByLevel() {
-    // 1. Get all quotas to know the structure (Level, Shift, Specialty, Parallel)
+    // 1. Obtener todos los cupos configurados
     const quotas = await this.prisma.admissionQuota.findMany();
 
-    // 2. We want to aggregate statistics per "Configuration Group"
-    // Usually, statistics are better viewed by Level + Shift + Specialty (ignoring parallel for a summary, or including it for detail)
-    // The requirement says: "Nivel educativo, Jornada, Especialidad, Total solicitudes, Aprobadas, Rechazadas, Cupos ocupados, Cupos disponibles"
-
-    // Let's Group Applications by level, shift, specialty
+    // 2. Obtener todas las solicitudes
     const applications = await this.prisma.application.findMany({
       select: {
         id: true,
-        gradeLevel: true, // changed from level
+        gradeLevel: true,
         shift: true,
         specialty: true,
         status: true,
       },
     });
 
-    // 3. Process data manually to aggregate (Prisma groupBy is good but sometimes manual is more flexible for complex matching)
-    const statsMap = new Map<string, {
-      level: string;
-      shift: string;
-      specialty: string | null;
-      totalApplications: number;
-      approved: number;
-      rejected: number;
-      pending: number;
-    }>();
-
-    // Helper mappings to align Application enums/keys with Quota labels
+    // Funciones de mapeo consistentes
     const mapLevel = (level: string) => {
       const mapping: Record<string, string> = {
-        'inicial_1': 'Inicial 1 (3 años)',
-        'inicial_2': 'Inicial 2 (4 años)',
+        'inicial_1': 'Inicial 1',
+        'inicial_2': 'Inicial 2',
         '1ro_basico': '1ero EGB',
         '2do_basico': '2do EGB',
         '3ro_basico': '3ero EGB',
@@ -163,105 +158,72 @@ export class ReportsService {
     };
 
     const mapShift = (shift: string | null) => {
-      return shift === 'MORNING' ? 'Matutina' : shift === 'AFTERNOON' ? 'Vespertina' : 'Sin jornada';
+      if (shift === 'MORNING' || shift === 'Matutina') return 'Matutina';
+      if (shift === 'AFTERNOON' || shift === 'Vespertina') return 'Vespertina';
+      return 'Sin jornada';
     };
 
     const mapSpecialty = (sp: string | null) => {
-      if (!sp || sp === 'none') return 'none';
+      if (!sp || sp === 'none' || sp === '-') return null;
       const s = sp.toUpperCase();
       if (s.includes('CIENCIAS')) return 'BGU Ciencias';
       if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA')) return 'BT Informática';
       return sp;
     };
 
-    // Initialize map with unique keys from applications (or quotas potentially, but quotas might have 0 apps)
-    // Let's iterate applications first to count reality
-    applications.forEach(app => {
-      const mappedLevel = mapLevel(app.gradeLevel || 'Sin nivel');
-      if (!app.gradeLevel) return; // omitir registros sin nivel
-      const mappedShift = mapShift(app.shift);
-      const mappedSpecialty = mapSpecialty(app.specialty);
-      const key = `${mappedLevel}-${mappedShift}-${mappedSpecialty}`;
+    // 3. Inicializar el mapa de estadísticas basado en los CUPOS (Cursos existentes)
+    const statsMap = new Map<string, any>();
+
+    quotas.forEach(q => {
+      const mappedLevel = mapLevel(q.level);
+      const mappedShift = q.shift; // Ya viene como Matutina/Vespertina en Quota
+      const mappedSpecialty = mapSpecialty(q.specialty);
+      const key = `${mappedLevel}|${mappedShift}|${mappedSpecialty || 'NA'}`;
 
       if (!statsMap.has(key)) {
         statsMap.set(key, {
           level: mappedLevel,
           shift: mappedShift,
-          specialty: mappedSpecialty === 'none' ? null : mappedSpecialty,
+          specialty: mappedSpecialty,
           totalApplications: 0,
           approved: 0,
           rejected: 0,
-          pending: 0,
+          totalQuota: 0,
         });
       }
-
-      const entry = statsMap.get(key)!;
-      entry.totalApplications++;
-
-      if (['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'].includes(app.status)) {
-        entry.approved++;
-      } else if (app.status === 'REJECTED' || app.status === 'CURSILLO_REJECTED') {
-        entry.rejected++;
-      } else {
-        entry.pending++;
-      }
+      statsMap.get(key).totalQuota += q.totalQuota;
     });
 
-    // 4. Calculate Quotas (Occupied vs Available)
-    // We need to sum up totalQuota for matching level/shift/specialty across parallels
-    const quotaMap = new Map<string, number>();
+    // 4. Procesar Aplicaciones
+    applications.forEach(app => {
+      const mappedLevel = mapLevel(app.gradeLevel || '');
+      const mappedShift = mapShift(app.shift);
+      const mappedSpecialty = mapSpecialty(app.specialty);
+      const key = `${mappedLevel}|${mappedShift}|${mappedSpecialty || 'NA'}`;
 
-    quotas.forEach(q => {
-      const mappedLevel = mapLevel(q.level);
-      const key = `${mappedLevel}-${q.shift}-${mapSpecialty(q.specialty)}`;
-      const currentTotal = quotaMap.get(key) || 0;
-      quotaMap.set(key, currentTotal + q.totalQuota);
-    });
+      // Solo contar si el curso existe en los cupos
+      if (statsMap.has(key)) {
+        const entry = statsMap.get(key);
+        entry.totalApplications++;
 
-    // 5. Merge results
-    const results = [];
-
-    // We should include levels that exist in Quotas even if they have 0 applications
-    const allKeys = new Set([...statsMap.keys(), ...quotaMap.keys()]);
-
-    allKeys.forEach(key => {
-      const stats = statsMap.get(key) || {
-        level: '', // Will be filled below if missing
-        shift: '',
-        specialty: null,
-        totalApplications: 0,
-        approved: 0,
-        rejected: 0,
-        pending: 0,
-      };
-
-      // If stats was missing (0 apps), we need to extract info from key or quota
-      if (!stats.level) {
-        const parts = key.split('-');
-        // Use matching quota to get proper casing if possible, otherwise parts
-        const q = quotas.find(q => `${q.level}-${q.shift}-${q.specialty || 'none'}` === key);
-        if (q) {
-          stats.level = q.level;
-          stats.shift = q.shift;
-          stats.specialty = q.specialty;
+        if (['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_UPLOADED', 'PAYMENT_VALIDATED', 'MATRICULATED'].includes(app.status)) {
+          entry.approved++;
+        } else if (app.status === 'REJECTED' || app.status === 'CURSILLO_REJECTED') {
+          entry.rejected++;
         }
       }
-
-      const totalQuota = quotaMap.get(key) || 0;
-      // Occupied slots are basically the approved applications + specifically reserved spots if any (but here we count approved apps)
-      // Note: In strict quota logic, we might count 'ASSIGNED' parallel apps, but for general stats, 'APPROVED' is the key.
-      const occupied = stats.approved;
-      const available = Math.max(0, totalQuota - occupied);
-
-      results.push({
-        ...stats,
-        totalQuota,
-        occupied,
-        available
-      });
     });
 
-    return results.sort((a, b) => a.level.localeCompare(b.level));
+    // 5. Convertir a array y ordenar
+    return Array.from(statsMap.values()).map(s => ({
+      ...s,
+      occupied: s.approved,
+      available: Math.max(0, s.totalQuota - s.approved)
+    })).sort((a, b) => {
+      const levelCompare = a.level.localeCompare(b.level, undefined, { numeric: true });
+      if (levelCompare !== 0) return levelCompare;
+      return a.shift.localeCompare(b.shift);
+    });
   }
 }
 
