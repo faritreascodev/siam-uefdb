@@ -36,7 +36,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
   const [formGrades, setFormGrades] = useState<any[]>(GRADE_LEVELS);
   const [formSpecialties, setFormSpecialties] = useState<any[]>([
     { value: 'BGU Ciencias', label: 'BGU Ciencias', afternoonOnly: false },
-    { value: 'BT Informática', label: 'BT Informática', afternoonOnly: true }
+    { value: 'Técnico en Informática', label: 'Técnico en Informática', afternoonOnly: true }
   ]);
   const [bguGrades, setBguGrades] = useState<string[]>(BGU_GRADES);
   const [cursilloGrades, setCursilloGrades] = useState<string[]>(CURSILLO_GRADES);
@@ -189,7 +189,7 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 value={data.specialty || ''}
                 onValueChange={(value) => {
                   handleChange('specialty', value);
-                  if (value === 'BT Informática') {
+                  if (value === 'Técnico en Informática') {
                     handleChange('shift', 'Vespertina');
                   }
                 }}

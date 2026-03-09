@@ -79,9 +79,9 @@ async function main() {
             let specialties = [null];
             if (level.includes('BGU')) {
                 specialties = ['BGU Ciencias'];
-                // BT Informática SOLO en Vespertina
-                if (level === '1ero BGU' && shift === 'Vespertina') {
-                    specialties.push('BT Informática');
+                // Técnico en Informática en todos los niveles BGU SOLO en Vespertina
+                if (shift === 'Vespertina') {
+                    specialties.push('Técnico en Informática');
                 }
             }
 
@@ -110,6 +110,7 @@ async function main() {
 
     // 4. ELIMINAR SOLICITUDES Y DATOS TRANSACCIONALES (DEJAR SISTEMA LIMPIO)
     console.log('Limpiando solicitudes y datos transaccionales previos...');
+    await prisma.admissionQuota.deleteMany({});
     await prisma.applicationDocument.deleteMany({});
     await prisma.cursilloEnrollment.deleteMany({});
     await prisma.application.deleteMany({});

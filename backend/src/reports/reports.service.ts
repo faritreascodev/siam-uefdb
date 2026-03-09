@@ -164,7 +164,7 @@ export class ReportsService {
       if (!sp || sp === 'none' || sp === '-') return null;
       const s = sp.toUpperCase();
       if (s.includes('CIENCIAS')) return 'BGU Ciencias';
-      if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA')) return 'BT Informática';
+      if (s.includes('INFORMATICA') || s.includes('INFORMÁTICA')) return 'Técnico en Informática';
       return sp;
     };
 
