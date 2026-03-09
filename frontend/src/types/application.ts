@@ -15,7 +15,7 @@ export type ApplicationStatus =
   | 'CURSILLO_REJECTED';
 
 export type Gender = 'M' | 'F' | 'OTHER';
-export type Shift = 'MORNING' | 'AFTERNOON';
+export type Shift = 'Matutina' | 'Vespertina';
 
 export type DocumentType =
   | 'STUDENT_ID'

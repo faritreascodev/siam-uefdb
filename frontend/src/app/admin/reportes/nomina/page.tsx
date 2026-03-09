@@ -36,7 +36,7 @@ const ALL_GRADES = [
   { value: "3ro BGU", label: "3° Bachillerato" },
 ]
 
-type ShiftType = '' | 'MORNING' | 'AFTERNOON' | 'all'
+type ShiftType = '' | 'Matutina' | 'Vespertina' | 'all'
 
 export default function NominaReportPage() {
   const { data: session } = useSession()
@@ -98,7 +98,7 @@ export default function NominaReportPage() {
     }
 
     const selectedGrade = ALL_GRADES.find(g => g.value === gradeLevel)
-    const shiftLabel = shift === 'MORNING' ? 'Matutina' : shift === 'AFTERNOON' ? 'Vespertina' : 'Todas'
+    const shiftLabel = shift === 'all' || !shift ? 'Todas' : shift
     const specialtyLabel = specialty && specialty !== 'all' ? specialty : ''
     const parallelLabel = parallel && parallel !== 'all' ? parallel : ''
 
@@ -109,7 +109,7 @@ export default function NominaReportPage() {
       'Nombres': (app.studentFirstName || '').toUpperCase(),
       'Género': app.studentGender === 'M' ? 'Masculino' : app.studentGender === 'F' ? 'Femenino' : app.studentGender === 'OTHER' ? 'Otro' : '',
       'Nivel': selectedGrade?.label || gradeLevel,
-      'Jornada': app.shift === 'MORNING' ? 'Matutina' : 'Vespertina',
+      'Jornada': app.shift || '',
       'Especialidad': app.specialty || '',
       'Paralelo': app.assignedParallel || '',
       'Institución Anterior': app.previousSchool || '',
@@ -154,7 +154,7 @@ export default function NominaReportPage() {
   }
 
   const gradeLabel = ALL_GRADES.find(g => g.value === gradeLevel)?.label || ''
-  const shiftLabel = shift === 'MORNING' ? 'Matutina' : shift === 'AFTERNOON' ? 'Vespertina' : ''
+  const shiftLabel = shift === 'all' || !shift ? '' : shift
 
   return (
     <div className="space-y-6">
@@ -207,8 +207,8 @@ export default function NominaReportPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="MORNING">Matutina</SelectItem>
-                  <SelectItem value="AFTERNOON">Vespertina</SelectItem>
+                  <SelectItem value="Matutina">Matutina</SelectItem>
+                  <SelectItem value="Vespertina">Vespertina</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -319,7 +319,7 @@ export default function NominaReportPage() {
                       <TableCell className="text-center">
                         <Badge className="font-bold">{app.assignedParallel || '—'}</Badge>
                       </TableCell>
-                      <TableCell>{app.shift === 'MORNING' ? 'Matutina' : app.shift === 'AFTERNOON' ? 'Vespertina' : '—'}</TableCell>
+                      <TableCell>{app.shift || '—'}</TableCell>
                       <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{app.previousSchool || '—'}</TableCell>
                       <TableCell className="text-center font-medium">
                         {app.lastYearAverage ? Number(app.lastYearAverage).toFixed(2) : '—'}

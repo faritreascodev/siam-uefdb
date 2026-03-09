@@ -12,7 +12,7 @@ import {
   IsNotEmpty
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Gender, Shift } from '@prisma/client';
+import { Gender } from '@prisma/client';
 
 // DTO para datos de lugar de nacimiento
 export class BirthPlaceDto {
@@ -191,9 +191,9 @@ export class CreateApplicationDto {
   @IsOptional()
   gradeLevel?: string;
 
-  @IsEnum(Shift)
+  @IsString()
   @IsOptional()
-  shift?: Shift;
+  shift?: string;
 
   @IsString()
   @IsOptional()

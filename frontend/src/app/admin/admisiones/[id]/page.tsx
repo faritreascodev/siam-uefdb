@@ -443,7 +443,7 @@ export default function ApplicationDetailPage({ params }: Props) {
                 <CardContent className="space-y-2">
                   <InfoRow label="Grado Solicitado" value={gradeLabel} />
                   {application.specialty && <InfoRow label="Especialidad" value={application.specialty} />}
-                  <InfoRow label="Jornada" value={application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'} />
+                  <InfoRow label="Jornada" value={application.shift} />
                   <InfoRow label="Escuela Anterior" value={application.previousSchool} />
                   <InfoRow label="Promedio Último Año" value={averageDisplay} />
                   <InfoRow label="Ha Repetido Año" value={application.hasRepeatedYear ? `Sí — ${application.repeatedYearDetail}` : 'No'} />

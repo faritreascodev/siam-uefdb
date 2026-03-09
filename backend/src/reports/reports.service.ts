@@ -158,11 +158,8 @@ export class ReportsService {
     };
 
     const mapShift = (shift: string | null) => {
-      if (shift === 'MORNING' || shift === 'Matutina') return 'Matutina';
-      if (shift === 'AFTERNOON' || shift === 'Vespertina') return 'Vespertina';
-      return 'Sin jornada';
+      return shift || 'Sin jornada';
     };
-
     const mapSpecialty = (sp: string | null) => {
       if (!sp || sp === 'none' || sp === '-') return null;
       const s = sp.toUpperCase();

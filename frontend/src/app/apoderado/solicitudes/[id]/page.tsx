@@ -318,7 +318,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
               {application.shift && (
                 <div>
                   <p className="text-xs text-purple-600 font-medium">Jornada</p>
-                  <p className="font-bold text-purple-900">{application.shift === 'MORNING' ? 'Matutina' : 'Vespertina'}</p>
+                  <p className="font-bold text-purple-900">{application.shift}</p>
                 </div>
               )}
             </div>
@@ -496,7 +496,7 @@ export default function ApplicationDetailPage({ params }: PageProps) {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <InfoItem label="Grado Solicitado" value={gradeLabel} />
-            <InfoItem label="Jornada" value={application.shift ? (application.shift === 'MORNING' ? 'Matutina' : 'Vespertina') : undefined} />
+            <InfoItem label="Jornada" value={application.shift || undefined} />
             <InfoItem label="Especialidad" value={application.specialty === 'CIENCIAS' ? 'BGU Ciencias' : application.specialty === 'TECNICO_INFORMATICA' ? 'BGU Técnico Informática' : application.specialty} />
             <InfoItem label="Institución Anterior" value={application.previousSchool} />
             <InfoItem label="Promedio Último Año" value={application.lastYearAverage?.toString()} />

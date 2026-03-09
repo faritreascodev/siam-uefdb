@@ -35,8 +35,8 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
 
   const [formGrades, setFormGrades] = useState<any[]>(GRADE_LEVELS);
   const [formSpecialties, setFormSpecialties] = useState<any[]>([
-    { value: 'CIENCIAS', label: 'BGU Ciencias', afternoonOnly: false },
-    { value: 'TECNICO_INFORMATICA', label: 'BT Informática', afternoonOnly: true }
+    { value: 'BGU Ciencias', label: 'BGU Ciencias', afternoonOnly: false },
+    { value: 'BT Informática', label: 'BT Informática', afternoonOnly: true }
   ]);
   const [bguGrades, setBguGrades] = useState<string[]>(BGU_GRADES);
   const [cursilloGrades, setCursilloGrades] = useState<string[]>(CURSILLO_GRADES);
@@ -189,8 +189,8 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
                 value={data.specialty || ''}
                 onValueChange={(value) => {
                   handleChange('specialty', value);
-                  if (value === 'TECNICO_INFORMATICA') {
-                    handleChange('shift', 'AFTERNOON');
+                  if (value === 'BT Informática') {
+                    handleChange('shift', 'Vespertina');
                   }
                 }}
               >
@@ -221,9 +221,9 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
               </SelectTrigger>
               <SelectContent>
                 {data.specialty !== 'TECNICO_INFORMATICA' && (
-                  <SelectItem value="MORNING">Matutina</SelectItem>
+                  <SelectItem value="Matutina">Matutina</SelectItem>
                 )}
-                <SelectItem value="AFTERNOON">Vespertina</SelectItem>
+                <SelectItem value="Vespertina">Vespertina</SelectItem>
               </SelectContent>
             </Select>
             {data.specialty === 'TECNICO_INFORMATICA' && (

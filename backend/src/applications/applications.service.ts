@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateApplicationDto, UpdateApplicationDto } from './dto/create-application.dto';
-import { ApplicationStatus, Shift } from '@prisma/client';
+import { ApplicationStatus } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
 
@@ -498,7 +498,7 @@ export class ApplicationsService {
     startDate?: string;
     endDate?: string;
     specialty?: string;
-    shift?: Shift;
+    shift?: string;
     assignedToId?: string;
     processedById?: string;
     assignedParallel?: string;
@@ -770,7 +770,7 @@ export class ApplicationsService {
       startDate?: string;
       endDate?: string;
       specialty?: string;
-      shift?: Shift;
+      shift?: string;
     }
   ) {
     const { status, gradeLevel, search, startDate, endDate, specialty, shift } = options || {};
@@ -853,11 +853,7 @@ export class ApplicationsService {
       return mapping[level] || level;
     };
 
-    const mapShift = (s: string) => {
-      if (s === 'MORNING') return 'Matutina';
-      if (s === 'AFTERNOON') return 'Vespertina';
-      return s;
-    };
+    const mapShift = (s: string) => s;
 
     const mappedLevel = mapLevel(gradeLevel);
     const mappedShift = mapShift(shift);
@@ -876,7 +872,7 @@ export class ApplicationsService {
     const approvedCount = await this.prisma.application.count({
       where: {
         gradeLevel,
-        shift: shift as Shift,
+        shift: shift,
         status: {
           in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_VALIDATED', 'MATRICULATED']
         }
@@ -946,7 +942,7 @@ export class ApplicationsService {
         const count = await this.prisma.application.count({
           where: {
             gradeLevel: application.gradeLevel,
-            shift: application.shift as Shift,
+            shift: application.shift as string,
             assignedParallel: p,
             status: 'MATRICULATED' as ApplicationStatus
           }
@@ -972,7 +968,7 @@ export class ApplicationsService {
       const count = await this.prisma.application.count({
         where: {
           gradeLevel: application.gradeLevel,
-          shift: application.shift as Shift,
+          shift: application.shift as string,
           assignedParallel: q.parallel,
           status: 'MATRICULATED' as ApplicationStatus
         }
@@ -1024,7 +1020,7 @@ export class ApplicationsService {
     const used = await this.prisma.application.count({
       where: {
         gradeLevel: application.gradeLevel,
-        shift: application.shift as Shift,
+        shift: application.shift as string,
         assignedParallel: parallel,
         status: 'MATRICULATED' as ApplicationStatus
       }
@@ -1045,7 +1041,7 @@ export class ApplicationsService {
       }
     });
 
-    const shiftStr = updated.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
+    const shiftStr = updated.shift || 'N/A';
     const gradeStr = updated.gradeLevel || 'N/A';
     const parallelStr = updated.assignedParallel || 'N/A';
     const assignmentDetails = `Curso: ${gradeStr}, Jornada: ${shiftStr}, Paralelo: ${parallelStr}`;

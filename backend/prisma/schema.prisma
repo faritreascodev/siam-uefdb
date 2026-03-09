@@ -155,10 +155,6 @@ enum Gender {
   OTHER
 }
 
-enum Shift {
-  MORNING
-  AFTERNOON
-}
 
 enum DocumentType {
   STUDENT_ID
@@ -239,7 +235,7 @@ model Application {
 
   // Datos Académicos
   gradeLevel         String?
-  shift              Shift?
+  shift              String?
   specialty          String? // Solo para Bachillerato (Ciencias, Técnico, etc.)
   previousSchool     String?
   lastYearAverage    Decimal?

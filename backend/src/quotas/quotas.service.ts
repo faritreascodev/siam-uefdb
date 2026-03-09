@@ -58,7 +58,7 @@ export class QuotasService {
         if (app.gradeLevel !== q.level) return false;
 
         // Match Shift (Enum to String mapping)
-        const appShiftStr = app.shift === 'MORNING' ? 'Matutina' : 'Vespertina';
+        const appShiftStr = app.shift;
         if (appShiftStr !== q.shift) return false;
 
         // Match Specialty (Handle nulls)
@@ -205,7 +205,7 @@ export class QuotasService {
         // Let's assume the mapping logic handled in Controller or here.
         // For simplicity, if shift string is passed, we map it back to Enum if possible, 
         // OR rely on the fact that existing applications have the correct enum.
-        shift: shift === 'Matutina' ? 'MORNING' : 'AFTERNOON',
+        shift: shift,
         specialty: specialty || null,
         // We do NOT filter by assignedParallel here, because a new applicant isn't assigned yet.
         // We check if *global* space exists in the grade.
