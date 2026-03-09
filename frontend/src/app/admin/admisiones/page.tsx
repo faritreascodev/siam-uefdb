@@ -191,11 +191,13 @@ export default function AdminAdmisionesPage() {
             {/* Fila 1: Búsqueda y Estados */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <Search className="h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  </div>
                   <Input
-                    placeholder="Buscar por nombre o cédula..."
-                    className="pl-9"
+                    placeholder="Búsqueda Inteligente: Nombres, Apellidos o Cédula..."
+                    className="pl-10 h-11 border-2 focus-visible:ring-primary/20 transition-all hover:border-primary/30"
                     value={filters.search}
                     onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
                   />

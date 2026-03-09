@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { checkQuotaAvailability } from '@/lib/api-applications';
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { SCHOOLS } from '@/lib/data/schools';
 
 interface AcademicDataFormProps {
@@ -234,16 +235,29 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
 
             {/* Cupos disponibles */}
             {quotaInfo && (
-              <div className={`text-xs px-2 py-1 rounded-md border mt-2 flex items-center justify-between
-                ${quotaInfo.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' :
-                  quotaInfo.status === 'LIMITED' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                    'bg-red-50 text-red-700 border-red-200'
-                }`}
-              >
-                <span className="font-medium">
-                  {quotaInfo.status === 'AVAILABLE' ? 'Vacantes Disponibles' :
-                    quotaInfo.status === 'LIMITED' ? 'Pocas Vacantes Disponibles' : 'Cupos Agotados'}
-                </span>
+              <div className={`mt-2 flex flex-col gap-2`}>
+                <div className={`text-xs px-2 py-1.5 rounded-md border flex items-center gap-2
+                  ${quotaInfo.status === 'AVAILABLE' ? 'bg-green-50 text-green-700 border-green-200' :
+                    quotaInfo.status === 'LIMITED' ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+                      'bg-red-50 text-red-700 border-red-200'
+                  }`}
+                >
+                  {quotaInfo.status === 'AVAILABLE' ? <CheckCircle className="h-3.5 w-3.5" /> :
+                    quotaInfo.status === 'LIMITED' ? <AlertTriangle className="h-3.5 w-3.5" /> :
+                      <XCircle className="h-3.5 w-3.5" />}
+                  <span className="font-medium">
+                    {quotaInfo.status === 'AVAILABLE' ? 'Vacantes Disponibles' :
+                      quotaInfo.status === 'LIMITED' ? '¡Atención! Pocas Vacantes Disponibles' : 'Cupos Agotados para esta Jornada'}
+                  </span>
+                  {quotaInfo.status === 'LIMITED' && (
+                    <span className="ml-auto font-bold underline">Quedan {quotaInfo.available}</span>
+                  )}
+                </div>
+                {quotaInfo.status === 'FULL' && (
+                  <p className="text-[10px] text-red-600 font-medium italic">
+                    * Por favor, intente cambiar de jornada o especialidad para encontrar vacantes.
+                  </p>
+                )}
               </div>
             )}
 
