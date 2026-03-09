@@ -87,11 +87,22 @@ async function main() {
 
             for (const spec of specialties) {
                 for (const p of parallels) {
-                    await prisma.admissionQuota.upsert({
-                        where: { quotaIdentifier: { level, parallel: p, shift, specialty: spec, academicYear: '2026-2027' } },
-                        update: { totalQuota: 30 },
-                        create: { level, parallel: p, shift, specialty: spec, totalQuota: 30, academicYear: '2026-2027' }
+                    const identifier = { level, parallel: p, shift, specialty: spec, academicYear: '2026-2027' };
+
+                    const existingQuota = await prisma.admissionQuota.findFirst({
+                        where: identifier
                     });
+
+                    if (existingQuota) {
+                        await prisma.admissionQuota.update({
+                            where: { id: existingQuota.id },
+                            data: { totalQuota: 30 }
+                        });
+                    } else {
+                        await prisma.admissionQuota.create({
+                            data: { ...identifier, totalQuota: 30 }
+                        });
+                    }
                 }
             }
         }
