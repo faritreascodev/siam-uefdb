@@ -28,7 +28,7 @@ export class ModuleAccessGuard implements CanActivate {
         ) || [];
 
         // Accesos definidos por defecto. El admin tiene todo.
-        if (userRoles.includes('superadmin') || userRoles.includes('admin') || userRoles.includes('directivo')) {
+        if (userRoles.includes('superadmin') || userRoles.includes('admin') || userRoles.includes('rector') || userRoles.includes('secretaria')) {
             return true;
         }
 

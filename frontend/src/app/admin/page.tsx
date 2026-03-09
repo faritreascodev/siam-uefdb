@@ -269,8 +269,8 @@ function DashboardStatsWithFunnel() {
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { isAdmin, isSuperAdmin, isDirectivo, roles } = useRoles();
-  const canViewMap = status === "authenticated" && (isAdmin() || isSuperAdmin() || isDirectivo());
+  const { isAdmin, isSuperAdmin, isDirectivo, isSecretaria, roles } = useRoles();
+  const canViewMap = status === "authenticated" && (isAdmin() || isSuperAdmin() || isDirectivo() || isSecretaria());
 
   useEffect(() => {
     if (status === "authenticated" && !canViewMap) {

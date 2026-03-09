@@ -75,7 +75,7 @@ export function AdminSidebar() {
     },
     {
       id: "admisiones",
-      title: "Solicitudes",
+      title: isSec || isPrinc ? "Bandeja de Entrada" : "Solicitudes",
       href: "/admin/admisiones",
       icon: FileText,
       show: fullAdmin || isPrinc || (isSec && secModules.admisiones),
@@ -89,7 +89,7 @@ export function AdminSidebar() {
     },
     {
       id: "cupos",
-      title: "Monitor Cursos",
+      title: "Cupos por Curso",
       href: "/admin/cursos",
       icon: Monitor,
       show: fullAdmin || (isSec && secModules.matriculacion),
