@@ -68,7 +68,8 @@ export class ApplicationsService {
       return await this.prisma.application.update({
         where: { id },
         data: {
-          ...restDto,
+          ...restDto as any,
+          shift: restDto.shift,
           studentBirthDate: restDto.studentBirthDate ? new Date(restDto.studentBirthDate) : undefined,
           studentBirthPlace: restDto.studentBirthPlace ? JSON.parse(JSON.stringify(restDto.studentBirthPlace)) : undefined,
           fatherData: restDto.fatherData ? JSON.parse(JSON.stringify(restDto.fatherData)) : undefined,
@@ -118,7 +119,8 @@ export class ApplicationsService {
           return await this.prisma.application.update({
             where: { id },
             data: {
-              ...retryDto,
+              ...retryDto as any,
+              shift: retryDto.shift,
               studentBirthDate: retryDto.studentBirthDate ? new Date(retryDto.studentBirthDate) : undefined,
               studentBirthPlace: retryDto.studentBirthPlace ? JSON.parse(JSON.stringify(retryDto.studentBirthPlace)) : undefined,
               fatherData: retryDto.fatherData ? JSON.parse(JSON.stringify(retryDto.fatherData)) : undefined,
@@ -838,7 +840,7 @@ export class ApplicationsService {
         'inicial_2': 'Inicial 2 (4 años)',
         '1ro_basico': '1ero EGB',
         '2do_basico': '2do EGB',
-        '3ro_basico': '3ero EGB',
+        '3ro_basico': '3ro EGB',
         '4to_basico': '4to EGB',
         '5to_basico': '5to EGB',
         '6to_basico': '6to EGB',
@@ -848,7 +850,7 @@ export class ApplicationsService {
         '10mo_basico': '10mo EGB',
         '1ro_bachillerato': '1ero BGU',
         '2do_bachillerato': '2do BGU',
-        '3ro_bachillerato': '3ero BGU',
+        '3ro_bachillerato': '3ro BGU',
       };
       return mapping[level] || level;
     };
@@ -872,7 +874,7 @@ export class ApplicationsService {
     const approvedCount = await this.prisma.application.count({
       where: {
         gradeLevel,
-        shift: shift,
+        shift: shift as any,
         status: {
           in: ['APPROVED', 'CURSILLO_APPROVED', 'PAYMENT_VALIDATED', 'MATRICULATED']
         }
@@ -926,7 +928,7 @@ export class ApplicationsService {
     const quotas = await this.prisma.admissionQuota.findMany({
       where: {
         level: application.gradeLevel,
-        shift: application.shift as string,
+        shift: application.shift as any,
         // specialty: application.specialty // Opcional, dependiendo de si la quota se define con especialidad
       }
     });
@@ -942,7 +944,7 @@ export class ApplicationsService {
         const count = await this.prisma.application.count({
           where: {
             gradeLevel: application.gradeLevel,
-            shift: application.shift as string,
+            shift: application.shift as any,
             assignedParallel: p,
             status: 'MATRICULATED' as ApplicationStatus
           }
@@ -968,7 +970,7 @@ export class ApplicationsService {
       const count = await this.prisma.application.count({
         where: {
           gradeLevel: application.gradeLevel,
-          shift: application.shift as string,
+          shift: application.shift as any,
           assignedParallel: q.parallel,
           status: 'MATRICULATED' as ApplicationStatus
         }
@@ -1005,7 +1007,7 @@ export class ApplicationsService {
     const quota = await this.prisma.admissionQuota.findFirst({
       where: {
         level: application.gradeLevel,
-        shift: application.shift as string,
+        shift: application.shift as any,
         parallel: parallel,
         // specialty: application.specialty || undefined 
         // Nota: Ajustar query de especialidad según modelo exacto
@@ -1020,7 +1022,7 @@ export class ApplicationsService {
     const used = await this.prisma.application.count({
       where: {
         gradeLevel: application.gradeLevel,
-        shift: application.shift as string,
+        shift: application.shift as any,
         assignedParallel: parallel,
         status: 'MATRICULATED' as ApplicationStatus
       }

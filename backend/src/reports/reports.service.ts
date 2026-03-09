@@ -149,7 +149,7 @@ export class ReportsService {
         'inicial_2': 'Inicial 2',
         '1ro_basico': '1ero EGB',
         '2do_basico': '2do EGB',
-        '3ro_basico': '3ero EGB',
+        '3ro_basico': '3ro EGB',
         '4to_basico': '4to EGB',
         '5to_basico': '5to EGB',
         '6to_basico': '6to EGB',
@@ -159,7 +159,7 @@ export class ReportsService {
         '10mo_basico': '10mo EGB',
         '1ro_bachillerato': '1ero BGU',
         '2do_bachillerato': '2do BGU',
-        '3ro_bachillerato': '3ero BGU',
+        '3ro_bachillerato': '3ro BGU',
       };
       return mapping[level] || level;
     };
