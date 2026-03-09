@@ -432,11 +432,22 @@ export default function ApplicationDetailPage({ params }: PageProps) {
 
       {/* Datos del Estudiante */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5" />
             Datos del Estudiante
           </CardTitle>
+          {(() => {
+            const photoDoc = application.documents?.find(d => d.documentType === 'STUDENT_PHOTO');
+            if (!photoDoc) return null;
+            const baseUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000').replace(/\/+$/, '');
+            const url = photoDoc.fileUrl.startsWith('http') ? photoDoc.fileUrl : `${baseUrl}/${photoDoc.fileUrl.replace(/^\/+/, '')}`;
+            return (
+              <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+                <img src={url} alt="Foto Estudiante" className="h-full w-full object-cover" />
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -532,6 +543,23 @@ export default function ApplicationDetailPage({ params }: PageProps) {
                 title={`Representante Legal (${application.representativeData.relationship || 'Sin especificar'})`}
                 data={application.representativeData}
               />
+            </>
+          )}
+
+          {application.extraContacts && application.extraContacts.length > 0 && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="font-medium">Contactos de Emergencia</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {application.extraContacts.map((c: any, i: number) => (
+                    <div key={i} className="text-sm p-3 bg-slate-50 rounded-lg border">
+                      <p className="font-bold">{c.firstName} {c.lastName}</p>
+                      <p className="text-muted-foreground">{c.relationship} · {c.phone}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </>
           )}
         </CardContent>

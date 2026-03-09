@@ -214,19 +214,19 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
             <Select
               value={data.shift || ''}
               onValueChange={(value) => handleChange('shift', value as Shift)}
-              disabled={data.specialty === 'TECNICO_INFORMATICA'}
+              disabled={data.specialty === 'Técnico en Informática'}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar jornada" />
               </SelectTrigger>
               <SelectContent>
-                {data.specialty !== 'TECNICO_INFORMATICA' && (
+                {data.specialty !== 'Técnico en Informática' && (
                   <SelectItem value="Matutina">Matutina</SelectItem>
                 )}
                 <SelectItem value="Vespertina">Vespertina</SelectItem>
               </SelectContent>
             </Select>
-            {data.specialty === 'TECNICO_INFORMATICA' && (
+            {data.specialty === 'Técnico en Informática' && (
               <p className="text-xs text-muted-foreground mt-1">
                 La especialidad 'BT Informática' se imparte únicamente en la jornada Vespertina.
               </p>
