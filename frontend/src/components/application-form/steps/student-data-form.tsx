@@ -47,9 +47,11 @@ export function StudentDataForm({ data, onChange }: StudentDataFormProps) {
     const token = session?.accessToken || session?.user?.accessToken;
     if (!token) return;
 
+    if (!cedula) return;
+
     try {
       setSearching(true);
-      const result = await searchByCedula(cedula, token);
+      const result = await searchByCedula(cedula, token as string);
 
       if (result && result.found) {
         const { studentData, familyData, enrollmentType } = result;

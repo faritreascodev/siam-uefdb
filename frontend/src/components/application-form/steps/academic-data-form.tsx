@@ -67,12 +67,13 @@ export function AcademicDataForm({ data, onChange }: AcademicDataFormProps) {
 
   useEffect(() => {
     async function checkQuota() {
-      if (!data.gradeLevel || !data.shift || !token) {
+      const { gradeLevel, shift, specialty, previousSchool } = data;
+      if (!gradeLevel || !shift || !token) {
         setQuotaInfo(null);
         return;
       }
       try {
-        const info = await checkQuotaAvailability(token, data.gradeLevel, data.shift, data.specialty, data.previousSchool);
+        const info = await checkQuotaAvailability(token, gradeLevel, shift, specialty, previousSchool);
         setQuotaInfo(info);
       } catch (error) {
         console.error('Failed to check quota', error);

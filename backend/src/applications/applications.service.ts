@@ -550,12 +550,24 @@ export class ApplicationsService {
       }
     }
 
-    // Advanced Search (Name or Cedula)
+    // Advanced Search (Name, Cedula or Representative)
     if (search) {
       where.OR = [
         { studentFirstName: { contains: search, mode: 'insensitive' } },
         { studentLastName: { contains: search, mode: 'insensitive' } },
         { studentCedula: { contains: search, mode: 'insensitive' } },
+        {
+          representativeData: {
+            path: ['names'],
+            string_contains: search,
+          },
+        },
+        {
+          representativeData: {
+            path: ['cedula'],
+            string_contains: search,
+          },
+        },
       ];
     }
 
