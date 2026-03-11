@@ -11,7 +11,7 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: "123"
@@ -33,21 +33,26 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    # Use expose instead of ports to avoid host binding conflicts with Traefik
-    expose:
-      - 4000
+    ports:
+      - "4000:4000"
     environment:
       DATABASE_URL: "${DATABASE_URL:-postgresql://postgres:123@postgres:5432/academyc_db}"
       JWT_SECRET: "${JWT_SECRET:-super-secret-jwt-key-change-in-production-12345}"
       JWT_EXPIRATION: "7d"
       PORT: "4000"
-      FRONTEND_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
+      FRONTEND_URL: "${NEXTAUTH_URL:-https://siam.mltprdj.com}"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - dokploy-network
       - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api-siam.mltprdj.com`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.backend.loadbalancer.server.port=4000"
 
   # Next.js Frontend
   frontend:
@@ -55,13 +60,12 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:4000}
+        NEXT_PUBLIC_API_URL: "https://api-siam.mltprdj.com"
     restart: unless-stopped
-    # Use expose instead of ports
-    expose:
-      - 3000
+    ports:
+      - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_URL: "${NEXT_PUBLIC_API_URL:-http://backend:4000}"
+      NEXT_PUBLIC_API_URL: "https://api-siam.mltprdj.com"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-super-secret-nextauth-key-change-in-production-67890}"
       NEXTAUTH_URL: "${NEXTAUTH_URL:-http://localhost:3000}"
       AUTH_TRUST_HOST: "true"
@@ -70,6 +74,12 @@ services:
     networks:
       - dokploy-network
       - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`siam.mltprdj.com`)"
+      - "traefik.http.routers.frontend.entrypoints=websecure"
+      - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
 
 volumes:
   postgres_data:

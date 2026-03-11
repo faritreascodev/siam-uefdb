@@ -28,16 +28,16 @@ export class AuthService {
 
     if (existingUser) {
       if (existingUser.email === email) {
-        throw new ConflictException('Email already in use');
+        throw new ConflictException('El correo electrónico ya está en uso');
       }
       if (cedula && existingUser.cedula === cedula) {
-        throw new ConflictException('Cedula already registered');
+        throw new ConflictException('La cédula ya está registrada en el sistema');
       }
     }
 
     // 2. Validar Cédula Ecuatoriana (Solo si se proporciona)
     if (cedula && !validateCedulaEcuatoriana(cedula)) {
-      throw new BadRequestException('Invalid Ecuadorian ID (Cédula)');
+      throw new BadRequestException('Cédula ecuatoriana inválida');
     }
 
     // 3. Hash password
@@ -93,13 +93,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
 
     // Verificar contraseña
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Correo o contraseña incorrectos');
     }
 
     // Verificar si el usuario está activo o pendiente
@@ -108,12 +108,12 @@ export class AuthService {
     }
 
     if (user.status === 'BLOQUEADO' || user.status === 'RECHAZADO') {
-      throw new UnauthorizedException('Account blocked or rejected.');
+      throw new UnauthorizedException('Cuenta bloqueada o rechazada. Comuníquese con la administración.');
     }
 
     // Legacy check
     if (!user.isActive) {
-      throw new UnauthorizedException('User is inactive');
+      throw new UnauthorizedException('La cuenta está inactiva. Comuníquese con la administración.');
     }
 
     // Extraer nombres de roles
@@ -190,7 +190,7 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('No user found with provided Cedula and Email');
+      throw new BadRequestException('No se encontró un usuario con la cédula y correo proporcionados');
     }
 
     // 2. Crear solicitud
@@ -221,7 +221,7 @@ export class AuthService {
       },
     });
 
-    return { message: 'Password updated successfully' };
+    return { message: 'Contraseña actualizada correctamente' };
   }
 }
 

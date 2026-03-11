@@ -45,6 +45,18 @@ export async function updateCursilloSession(token: string, id: string, data: {
     return res.json();
 }
 
+export async function notifyCursilloSessionEnrolled(token: string, id: string) {
+    const res = await fetch(`${API_URL}/cursillos/sessions/${id}/notify-enrolled`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || 'Error al notificar');
+    }
+    return res.json();
+}
+
 export async function createCursilloSession(token: string, data: {
     subject: string;
     subjectCode: string;

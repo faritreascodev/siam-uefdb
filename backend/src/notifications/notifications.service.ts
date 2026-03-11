@@ -195,6 +195,35 @@ export class NotificationsService {
     });
   }
 
+  // Notificar inscripción en cursillo con información de materias
+  async notifyCursilloEnrollment(userId: string, applicationId: string, studentName: string, sessions: any[]) {
+    const materiasInfo = sessions.map(s => 
+      `• ${s.subject} - Docente: ${s.teacherName || 'Por asignar'} - Link: ${s.teamsLink || 'Por confirmar'}`
+    ).join('\n');
+    
+    return this.create({
+      userId,
+      type: 'APPLICATION_APPROVED' as NotificationType,
+      priority: 'HIGH',
+      message: `${studentName} ha sido inscrito/a en el cursillo. Materias:\n${materiasInfo}\n\nFecha de inicio: ${sessions[0]?.startDate ? new Date(sessions[0].startDate).toLocaleDateString('es-EC') : 'Por confirmar'}\nHorario: ${sessions[0]?.sessionSchedule || 'Por confirmar'}`,
+      applicationId,
+      actionUrl: `/apoderado/solicitudes/${applicationId}/cursillo`,
+    });
+  }
+
+  // Notificar resultado del cursillo
+  async notifyCursilloResult(userId: string, applicationId: string, studentName: string, passed: boolean, notes?: string) {
+    return this.create({
+      userId,
+      type: passed ? 'APPLICATION_APPROVED' as NotificationType : 'APPLICATION_REJECTED' as NotificationType,
+      priority: passed ? 'HIGH' : 'URGENT',
+      message: passed 
+        ? `¡Felicidades! ${studentName} ha APROBADO el cursillo. ${notes || 'Puede continuar con el proceso de matriculación.'}`
+        : `${studentName} NO APROBÓ el cursillo. ${notes || 'Por favor contacte a la institución para más información.'}`,
+      applicationId,
+    });
+  }
+
   // Notificar al apoderado pago validado
   async notifyPaymentValidated(userId: string, applicationId: string, studentName: string) {
     return this.create({

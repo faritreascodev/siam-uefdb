@@ -25,8 +25,8 @@ export default auth((req) => {
   // Verificar rol admin (admin o superadmin pueden acceder)
   if (pathname.startsWith("/admin")) {
     const userRoles = req.auth?.user?.roles || [];
-    const hasAdminAccess = userRoles.some((role: string) => 
-      ["superadmin", "admin", "principal", "secretary"].includes(role)
+    const hasAdminAccess = userRoles.some((role: string) =>
+      ["superadmin", "admin", "rector", "secretaria"].includes(role)
     );
     if (!hasAdminAccess) {
       return NextResponse.redirect(new URL("/dashboard", req.url));

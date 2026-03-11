@@ -6,6 +6,7 @@ import {
   getCursilloSessions,
   getCursilloStats,
   updateCursilloSession,
+  notifyCursilloSessionEnrolled,
 } from '@/lib/api-cursillo';
 import { getAllApplications } from '@/lib/api-admin-applications';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ import {
   RefreshCw,
   AlertTriangle,
   ChevronRight,
+  BellRing,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -185,6 +187,17 @@ export default function AdminCursillosPage() {
     }
   };
 
+  const handleNotifyEnrolled = async (sessionId: string) => {
+    if (!token) return;
+    if (!confirm('¿Seguro de que deseas notificar a todos los inscritos en esta materia sobre actualizaciones de horario, profesor y fecha?')) return;
+    try {
+      const resp = await notifyCursilloSessionEnrolled(token, sessionId);
+      toast.success(`Se enviaron notificaciones a ${resp.notified} apoderados.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Error al notificar');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const map: Record<string, { label: string; class: string }> = {
       APPROVED: { label: 'Aprobado', class: 'bg-emerald-100 text-emerald-800' },
@@ -308,7 +321,7 @@ export default function AdminCursillosPage() {
             </div>
             <div className="grid md:grid-cols-3 gap-4">
               {sessions8vo.map(s => (
-                <SessionCard key={s.id} session={s} onEdit={openEdit} />
+                <SessionCard key={s.id} session={s} onEdit={openEdit} onNotify={handleNotifyEnrolled} />
               ))}
               {sessions8vo.length === 0 && (
                 <p className="text-muted-foreground col-span-3 text-sm">No hay sesiones configuradas</p>
@@ -327,7 +340,7 @@ export default function AdminCursillosPage() {
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               {sessions1ro.map(s => (
-                <SessionCard key={s.id} session={s} onEdit={openEdit} />
+                <SessionCard key={s.id} session={s} onEdit={openEdit} onNotify={handleNotifyEnrolled} />
               ))}
               {sessions1ro.length === 0 && (
                 <p className="text-muted-foreground col-span-4 text-sm">No hay sesiones configuradas</p>
@@ -521,7 +534,7 @@ export default function AdminCursillosPage() {
   );
 }
 
-function SessionCard({ session, onEdit }: { session: CursilloSession; onEdit: (s: CursilloSession) => void }) {
+function SessionCard({ session, onEdit, onNotify }: { session: CursilloSession; onEdit: (s: CursilloSession) => void; onNotify: (id: string) => void }) {
   const colorClass = SUBJECT_COLORS[session.subjectCode] || 'bg-gray-100 text-gray-800';
   const enrolled = session.enrollments.length;
   const approved = session.enrollments.filter(e => e.passed === true).length;
@@ -535,9 +548,14 @@ function SessionCard({ session, onEdit }: { session: CursilloSession; onEdit: (s
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${colorClass}`}>
             {session.subject}
           </span>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(session)}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50" onClick={() => onNotify(session.id)} title="Notificar a inscritos">
+              <BellRing className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(session)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
         {session.specialty && (
           <p className="text-xs text-muted-foreground mt-1">Solo: {session.specialty}</p>

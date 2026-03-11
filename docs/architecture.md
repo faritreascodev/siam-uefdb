@@ -174,3 +174,27 @@ El sistema usa claves en la tabla `SystemConfig`:
 | ENROLLMENT_END_DATE      | 2026-06-30                     |
 | PAYMENT_AMOUNT           | 150.00                         |
 | SECRETARY_MODULES        | JSON con módulos habilitados   |
+
+---
+
+## Características de Lógica Empresarial Clave
+
+A continuación las mecánicas más relevantes desarrolladas dentro del core del proyecto:
+
+### 1. View Engine para Directivos (RBAC UI)
+El Rol `rector` (`principal` en la base de datos) tiene una vista limitada dentro del módulo de admisiones:
+- No ve el total de solicitudes enviadas por defecto.
+- Solo interactúa con aquellas solicitudes que un perfil administrativo superior (`admin` o `secretary`) le asigne explícitamente mediante el motor de **Asignación de Evaluación**.
+- La petición de Frontend se intercepta y dirige al endpoint segregado `GET /applications/directivo/assigned` en lugar de listar en bruto el total de admisiones.
+
+### 2. Broadcast de Cambios de Cursillo
+El módulo Cursillo expone un sistema de notificaciones masivas para notificar alteraciones (`POST /cursillos/sessions/:id/notify-enrolled`):
+- Los roles administrativos pueden corregir y actualizar los Links de Teams, nombres de docentes y horarios.
+- Al guardar o activar el trigger de aviso, una cola notifica mediante `NotificationsService` directamente a los apoderados (App + Email) informando de la actualización reciente de la asignatura respectiva sin desbaratar la matrícula inicial del alumno.
+
+### 3. Motor de Asignación a Paralelos y Sustracción de Cupos
+Cuando un aplicante supera todas sus metas condicionales y valida su pago (`PAYMENT_VALIDATED` o superior), ocurre el proceso de **Matriculación por Paralelo**:
+- Un diálogo evalúa qué paralelos existen para ese Grado / Jornada / Especialidad.
+- Evalúa matemáticamente la diferencia (Disponibles vs. Ocupados).
+- La asignación transita a `MATRICULATED`, y consume definitivamente 1 cupo del conteo disponible en el Monitor Global.
+- Esto se efectúa transaccionalmente; los paralelos sin cupos arrojan errores y se inhabilitan en tiempo real en la Interfaz.

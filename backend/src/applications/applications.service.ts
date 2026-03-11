@@ -867,7 +867,12 @@ export class ApplicationsService {
       return mapping[level] || level;
     };
 
-    const mapShift = (s: string) => s;
+    const mapShift = (s: string) => {
+      // Normalizar formato antiguo (MORNING/AFTERNOON) al formato actual de BD (Matutina/Vespertina)
+      if (s === 'MORNING') return 'Matutina';
+      if (s === 'AFTERNOON') return 'Vespertina';
+      return s; // Ya está en formato correcto (Matutina/Vespertina)
+    };
 
     const mappedLevel = mapLevel(gradeLevel);
     const mappedShift = mapShift(shift);

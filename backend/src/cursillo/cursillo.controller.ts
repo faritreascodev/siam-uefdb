@@ -67,6 +67,13 @@ export class CursilloController {
         return this.cursilloService.updateSession(id, dto);
     }
 
+    @Post('sessions/:id/notify-enrolled')
+    @Roles('admin', 'superadmin', 'secretaria', 'rector')
+    @ApiOperation({ summary: 'Notificar a todos los apoderados inscritos en esta sesión sobre cambios' })
+    notifyEnrolled(@Param('id') id: string) {
+        return this.cursilloService.notifyEnrolledStudents(id);
+    }
+
     // ============ INSCRIPCIONES ============
 
     /**

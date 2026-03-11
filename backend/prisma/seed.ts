@@ -109,6 +109,36 @@ async function main() {
   });
   await assignRole(rector.id, roles['rector']);
 
+  const vicerrector = await prisma.user.upsert({
+    where: { email: 'vicerrector@uefdb.edu.ec' },
+    update: { status: 'ACTIVO', isActive: true },
+    create: {
+      email: 'vicerrector@uefdb.edu.ec',
+      password: await hash('Vicerrector123!'),
+      firstName: 'Elena',
+      lastName: 'Suárez',
+      status: 'ACTIVO',
+      isActive: true,
+      cedula: '0800000003',
+    },
+  });
+  await assignRole(vicerrector.id, roles['rector']);
+
+  const coordinador = await prisma.user.upsert({
+    where: { email: 'coordinador@uefdb.edu.ec' },
+    update: { status: 'ACTIVO', isActive: true },
+    create: {
+      email: 'coordinador@uefdb.edu.ec',
+      password: await hash('Coordinador123!'),
+      firstName: 'Miguel',
+      lastName: 'Álava',
+      status: 'ACTIVO',
+      isActive: true,
+      cedula: '0800000004',
+    },
+  });
+  await assignRole(coordinador.id, roles['rector']);
+
   // secretary — day-to-day processing
   const secretary = await prisma.user.upsert({
     where: { email: 'secretaria@uefdb.edu.ec' },
@@ -128,25 +158,11 @@ async function main() {
   // apoderado demo users (3 different scenarios for testing)
   const apoderadoDefs = [
     {
-      email: 'apoderado1@demo.ec',
+      email: 'mateo.test@gmail.ec',
       password: 'Guardian123!',
-      firstName: 'María',
-      lastName: 'González',
+      firstName: 'Mateo',
+      lastName: 'Test',
       cedula: '0900000001',
-    },
-    {
-      email: 'apoderado2@demo.ec',
-      password: 'Guardian123!',
-      firstName: 'Jorge',
-      lastName: 'Ramírez',
-      cedula: '0900000002',
-    },
-    {
-      email: 'apoderado3@demo.ec',
-      password: 'Guardian123!',
-      firstName: 'Lucía',
-      lastName: 'Pinto',
-      cedula: '0900000003',
     },
   ];
 
@@ -300,7 +316,7 @@ async function main() {
   const demoApplications = [
     // --- Scenario A: Draft (started but not submitted) ---
     {
-      userId: apoderados['apoderado1@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'DRAFT' as const,
       studentFirstName: 'Ana',
       studentLastName: 'González Pez',
@@ -309,14 +325,14 @@ async function main() {
       studentBirthDate: new Date('2012-05-15'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '8vo EGB',
-      shift: 'MORNING' as const,
+      shift: 'Matutina' as const,
       previousSchool: 'Escuela Juan Montalvo',
       lastYearAverage: 8.5,
       acceptedIdeario: true,
     },
     // --- Scenario B: Submitted (under review) ---
     {
-      userId: apoderados['apoderado1@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'UNDER_REVIEW' as const,
       submittedAt: new Date('2026-02-10'),
       studentFirstName: 'Pedro',
@@ -326,14 +342,14 @@ async function main() {
       studentBirthDate: new Date('2011-08-20'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '9no EGB',
-      shift: 'AFTERNOON' as const,
+      shift: 'Vespertina' as const,
       previousSchool: 'Colegio San Gabriel',
       lastYearAverage: 9.1,
       acceptedIdeario: true,
     },
     // --- Scenario C: Cursillo required (8vo from external school) ---
     {
-      userId: apoderados['apoderado2@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'CURSILLO_SCHEDULED' as const,
       submittedAt: new Date('2026-02-05'),
       studentFirstName: 'Karla',
@@ -343,7 +359,7 @@ async function main() {
       studentBirthDate: new Date('2012-03-10'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '8vo EGB',
-      shift: 'MORNING' as const,
+      shift: 'Matutina' as const,
       previousSchool: 'Escuela 15 de Marzo',
       lastYearAverage: 8.0,
       acceptedIdeario: true,
@@ -352,7 +368,7 @@ async function main() {
     },
     // --- Scenario D: Approved, awaiting payment ---
     {
-      userId: apoderados['apoderado2@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'APPROVED' as const,
       submittedAt: new Date('2026-01-20'),
       studentFirstName: 'Luís',
@@ -362,14 +378,14 @@ async function main() {
       studentBirthDate: new Date('2010-11-05'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '10mo EGB',
-      shift: 'AFTERNOON' as const,
+      shift: 'Vespertina' as const,
       previousSchool: 'Colegio Benito Juárez',
       lastYearAverage: 8.8,
       acceptedIdeario: true,
     },
     // --- Scenario E: Payment uploaded, pending validation ---
     {
-      userId: apoderados['apoderado3@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'PAYMENT_UPLOADED' as const,
       submittedAt: new Date('2026-01-15'),
       studentFirstName: 'Valentina',
@@ -379,8 +395,8 @@ async function main() {
       studentBirthDate: new Date('2009-07-22'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '1ero BGU',
-      shift: 'AFTERNOON' as const,
-      specialty: 'Ciencias',
+      shift: 'Vespertina' as const,
+      specialty: 'BGU Ciencias',
       previousSchool: 'Colegio Nacional Esmeraldas',
       lastYearAverage: 9.3,
       acceptedIdeario: true,
@@ -390,7 +406,7 @@ async function main() {
     },
     // --- Scenario F: Fully matriculated ---
     {
-      userId: apoderados['apoderado3@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'MATRICULATED' as const,
       submittedAt: new Date('2026-01-08'),
       studentFirstName: 'Sebastián',
@@ -400,8 +416,8 @@ async function main() {
       studentBirthDate: new Date('2009-04-18'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '1ero BGU',
-      shift: 'AFTERNOON' as const,
-      specialty: 'Técnico Informática',
+      shift: 'Vespertina' as const,
+      specialty: 'BT Informática',
       previousSchool: 'Colegio Nacional Esmeraldas',
       lastYearAverage: 8.2,
       acceptedIdeario: true,
@@ -416,7 +432,7 @@ async function main() {
     },
     // --- Scenario G: Cursillo rejected (failed, spot freed) ---
     {
-      userId: apoderados['apoderado1@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'CURSILLO_REJECTED' as const,
       submittedAt: new Date('2026-01-25'),
       studentFirstName: 'Roberto',
@@ -426,8 +442,8 @@ async function main() {
       studentBirthDate: new Date('2011-12-01'),
       studentNationality: 'ECUATORIANA',
       gradeLevel: '1ero BGU',
-      shift: 'MORNING' as const,
-      specialty: 'Ciencias',
+      shift: 'Matutina' as const,
+      specialty: 'BGU Ciencias',
       previousSchool: 'Liceo Cristiano',
       lastYearAverage: 6.5,
       acceptedIdeario: true,
@@ -438,7 +454,7 @@ async function main() {
     },
     // --- Scenario H: Requires correction ---
     {
-      userId: apoderados['apoderado2@demo.ec'],
+      userId: apoderados['mateo.test@gmail.ec'],
       status: 'REQUIRES_CORRECTION' as const,
       submittedAt: new Date('2026-02-18'),
       studentFirstName: 'Isabel',
@@ -456,6 +472,7 @@ async function main() {
       assignedToId: rector.id,
     },
   ];
+
 
   const createdApps: Record<string, any> = {};
 
@@ -709,11 +726,11 @@ async function main() {
   console.log('Credentials:');
   console.log('  superadmin@uefdb.edu.ec  / SuperAdmin123!   (superadmin)');
   console.log('  admin@uefdb.edu.ec       / Admin123!        (admin)');
-  console.log('  rector@uefdb.edu.ec      / Rector123!       (principal)');
+  console.log('  rector@uefdb.edu.ec      / Rector123!       (principal/directivo)');
+  console.log('  vicerrector@uefdb.edu.ec / Vicerrector123!  (principal/directivo)');
+  console.log('  coordinador@uefdb.edu.ec / Coordinador123!  (principal/directivo)');
   console.log('  secretaria@uefdb.edu.ec  / Secretaria123!   (secretary)');
-  console.log('  apoderado1@demo.ec       / Guardian123!     (apoderado)');
-  console.log('  apoderado2@demo.ec       / Guardian123!     (apoderado)');
-  console.log('  apoderado3@demo.ec       / Guardian123!     (apoderado)');
+  console.log('  mateo.test@gmail.ec      / Guardian123!     (apoderado)');
   console.log('-------------------------------------------------------');
   console.log('Demo applications cover all states:');
   console.log('  DRAFT, UNDER_REVIEW, REQUIRES_CORRECTION,');

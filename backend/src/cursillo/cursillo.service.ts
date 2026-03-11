@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateCursilloSessionDto, UpdateCursilloSessionDto, UpdateEnrollmentDto } from './dto/cursillo.dto';
 import { ApplicationStatus } from '@prisma/client';
 
@@ -37,7 +38,10 @@ const MIN_SCORE = 7;
 
 @Injectable()
 export class CursilloService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private notificationsService: NotificationsService
+    ) { }
 
     // ============ SESIONES ============
 
@@ -143,7 +147,14 @@ export class CursilloService {
     async enrollApplicationInAllSubjects(applicationId: string, academicYear: string = '2026-2027') {
         const application = await this.prisma.application.findUnique({
             where: { id: applicationId },
-            select: { gradeLevel: true, specialty: true, status: true },
+            select: { 
+                gradeLevel: true, 
+                specialty: true, 
+                status: true,
+                userId: true,
+                studentFirstName: true,
+                studentLastName: true
+            },
         });
 
         if (!application) throw new NotFoundException('Solicitud no encontrada');
@@ -211,6 +222,31 @@ export class CursilloService {
             });
 
             enrollments.push(enrollment);
+        }
+
+        // Actualizar estado de la solicitud a CURSILLO_SCHEDULED
+        await this.prisma.application.update({
+            where: { id: applicationId },
+            data: { 
+                status: 'CURSILLO_SCHEDULED',
+                cursilloScheduled: true,
+            },
+        });
+
+        // Notificar al apoderado con información del cursillo
+        const studentName = `${application.studentFirstName} ${application.studentLastName}`;
+        const sessionsInfo = enrollments.map(e => e.session);
+        
+        try {
+            await this.notificationsService.notifyCursilloEnrollment(
+                application.userId, 
+                applicationId, 
+                studentName,
+                sessionsInfo
+            );
+        } catch (error) {
+            console.error('Error enviando notificación de cursillo:', error);
+            // No lanzar error para no interrumpir el flujo principal
         }
 
         return enrollments;
@@ -307,7 +343,7 @@ export class CursilloService {
      * Calcular el resultado final del cursillo para una solicitud
      * y actualizar la solicitud en la BD
      */
-    async computeAndSetFinalResult(applicationId: string): Promise<{ passed: boolean; reason: string }> {
+    async computeAndSetFinalResult(applicationId: string): Promise<{ passed: boolean; reason: string; userId: string; studentName: string }> {
         const enrollments = await this.prisma.cursilloEnrollment.findMany({
             where: { applicationId },
             include: { session: true },
@@ -345,16 +381,37 @@ export class CursilloService {
         }
 
         // Actualizar la aplicación
-        await this.prisma.application.update({
+        const updatedApp = await this.prisma.application.update({
             where: { id: applicationId },
             data: {
                 status,
                 cursilloResult: cursilloResult as any,
                 cursilloNotes: reason,
             },
+            select: {
+                userId: true,
+                studentFirstName: true,
+                studentLastName: true,
+            }
         });
 
-        return { passed, reason };
+        // Notificar al apoderado del resultado
+        const studentName = `${updatedApp.studentFirstName} ${updatedApp.studentLastName}`;
+        
+        try {
+            await this.notificationsService.notifyCursilloResult(
+                updatedApp.userId,
+                applicationId,
+                studentName,
+                passed,
+                reason
+            );
+        } catch (error) {
+            console.error('Error enviando notificación de resultado de cursillo:', error);
+            // No lanzar error para no interrumpir el flujo principal
+        }
+
+        return { passed, reason, userId: updatedApp.userId, studentName };
     }
 
     /**
@@ -372,12 +429,24 @@ export class CursilloService {
                         { gradeLevel: '1ro_bachillerato' },
                     ],
                     status: { notIn: ['DRAFT', 'REJECTED', 'REQUIRES_CORRECTION'] },
-                    NOT: {
-                        previousSchool: {
-                            contains: 'DON BOSCO',
-                            mode: 'insensitive',
+                    AND: [
+                        {
+                            NOT: {
+                                previousSchool: {
+                                    contains: 'DON BOSCO',
+                                    mode: 'insensitive',
+                                },
+                            },
                         },
-                    },
+                        {
+                            NOT: {
+                                previousSchool: {
+                                    contains: 'UEFDB',
+                                    mode: 'insensitive',
+                                },
+                            },
+                        },
+                    ],
                 },
             }),
             this.prisma.application.count({
@@ -409,6 +478,63 @@ export class CursilloService {
             sessions,
             enrollments,
         };
+    }
+
+    /**
+     * Notificar a todos los apoderados inscritos en una sesión cuando se actualizan sus detalles
+     */
+    async notifyEnrolledStudents(sessionId: string): Promise<{ notified: number; sessionSubject: string }> {
+        const session = await this.prisma.cursilloSession.findUnique({
+            where: { id: sessionId },
+            include: {
+                enrollments: {
+                    include: {
+                        application: {
+                            select: {
+                                id: true,
+                                userId: true,
+                                studentFirstName: true,
+                                studentLastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!session) throw new NotFoundException('Sesión de cursillo no encontrada');
+
+        let notified = 0;
+        for (const enrollment of session.enrollments) {
+            const app = enrollment.application;
+            const studentName = `${app.studentFirstName} ${app.studentLastName}`;
+            const startDateStr = session.startDate
+                ? new Date(session.startDate).toLocaleDateString('es-EC', { day: '2-digit', month: 'long' })
+                : 'Por confirmar';
+            const endDateStr = session.endDate
+                ? new Date(session.endDate).toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' })
+                : '';
+
+            try {
+                await this.notificationsService.create({
+                    userId: app.userId,
+                    type: 'APPLICATION_UNDER_REVIEW',
+                    priority: 'HIGH',
+                    message: `📚 Actualización del cursillo para ${studentName} — ${session.subject}:\n`
+                        + `• Docente: ${session.teacherName || 'Por asignar'}\n`
+                        + `• Horario: ${session.sessionSchedule || 'Por confirmar'}\n`
+                        + `• Fechas: ${startDateStr}${endDateStr ? ` al ${endDateStr}` : ''}\n`
+                        + `• Enlace Teams: ${session.teamsLink || 'Por confirmar'}`,
+                    applicationId: app.id,
+                    actionUrl: `/apoderado/solicitudes/${app.id}/cursillo`,
+                });
+                notified++;
+            } catch (error) {
+                console.error(`Error notificando a userId=${app.userId}:`, error);
+            }
+        }
+
+        return { notified, sessionSubject: session.subject };
     }
 
     /**

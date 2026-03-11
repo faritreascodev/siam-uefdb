@@ -2,8 +2,9 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, useCallback } from 'react';
-import { getAllApplications, getGlobalStats } from '@/lib/api-admin-applications';
+import { getAllApplications, getAssignedApplications, getGlobalStats } from '@/lib/api-admin-applications';
 import { Application, ApplicationStats, GRADE_LEVELS } from '@/types/application';
+import { useRoles } from '@/hooks/use-roles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,6 +50,8 @@ export default function AdminAdmisionesPage() {
     shift: undefined as string | undefined
   });
   const limit = 15;
+  const { isRector, isFullAdmin, isSecretaria } = useRoles();
+  const onlyAssigned = isRector() && !isFullAdmin() && !isSecretaria();
 
   // @ts-expect-error - accessToken is added in next-auth callbacks
   const token = session?.accessToken || (session?.user as { accessToken?: string })?.accessToken;
@@ -58,8 +61,10 @@ export default function AdminAdmisionesPage() {
 
     setLoading(true);
     try {
-      const [paginatedData, statsData] = await Promise.all([
-        getAllApplications(token, {
+      let paginatedData;
+      let statsData;
+      
+      const filtersObj = {
           status: filters.status === 'ALL' ? undefined : filters.status,
           gradeLevel: filters.gradeLevel === 'ALL' ? undefined : filters.gradeLevel,
           search: filters.search || undefined,
@@ -69,9 +74,30 @@ export default function AdminAdmisionesPage() {
           shift: filters.shift,
           page,
           limit,
-        }),
-        getGlobalStats(token),
-      ]);
+      };
+
+      if (onlyAssigned) {
+        const [assignedApps, globalStats] = await Promise.all([
+          getAssignedApplications(token, filtersObj),
+          getGlobalStats(token),
+        ]);
+        paginatedData = {
+          data: assignedApps,
+          totalPages: 1, // pseudo-pagination since backend doesn't paginate assigned
+          total: assignedApps.length,
+          page: 1,
+          limit: assignedApps.length || 15
+        };
+        statsData = globalStats;
+      } else {
+        const [allApps, globalStats] = await Promise.all([
+          getAllApplications(token, filtersObj),
+          getGlobalStats(token),
+        ]);
+        paginatedData = allApps;
+        statsData = globalStats;
+      }
+
       setApplications(paginatedData.data);
       setTotalPages(paginatedData.totalPages);
       setStats(statsData);
@@ -80,7 +106,7 @@ export default function AdminAdmisionesPage() {
     } finally {
       setLoading(false);
     }
-  }, [token, page, filters, limit]);
+  }, [token, page, filters, limit, onlyAssigned]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -252,8 +278,8 @@ export default function AdminAdmisionesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Todas</SelectItem>
-                    <SelectItem value="Ciencias">Ciencias</SelectItem>
-                    <SelectItem value="Técnico">Técnico</SelectItem>
+                    <SelectItem value="BGU Ciencias">BGU Ciencias</SelectItem>
+                    <SelectItem value="BT Informática">BT Informática</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -268,8 +294,8 @@ export default function AdminAdmisionesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ALL">Todas</SelectItem>
-                    <SelectItem value="MORNING">Matutina</SelectItem>
-                    <SelectItem value="AFTERNOON">Vespertina</SelectItem>
+                    <SelectItem value="Matutina">Matutina</SelectItem>
+                    <SelectItem value="Vespertina">Vespertina</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

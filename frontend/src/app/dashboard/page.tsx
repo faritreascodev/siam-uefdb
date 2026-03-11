@@ -24,7 +24,7 @@ import {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { hasAdminAccess, isApoderado, isDirectivo, isSecretaria, roles } = useRoles();
+  const { hasAdminAccess, isApoderado, isDirectivo, isSecretaria, roles, canManageUsers, isFullAdmin, isRector } = useRoles();
 
   if (status === "loading") {
     return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Cargando panel...</div>;
@@ -167,7 +167,7 @@ export default function DashboardPage() {
               )}
 
               {/* Usuarios - Para admins */}
-              {hasAdminAccess() && (
+              {canManageUsers() && (
                 <Link href="/admin/users" className="group">
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-slate-50/50">
                     <CardHeader>
@@ -187,8 +187,8 @@ export default function DashboardPage() {
                 </Link>
               )}
 
-              {/* Admisiones - Para admins */}
-              {hasAdminAccess() && (
+              {/* Admisiones - Para admins y rector */}
+              {(isFullAdmin() || isRector()) && (
                 <Link href="/admin/admisiones" className="group">
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-slate-50/50">
                     <CardHeader>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
               )}
 
               {/* Panel Admin - Para admins */}
-              {hasAdminAccess() && (
+              {isFullAdmin() && (
                 <Link href="/admin" className="group">
                   <Card className="h-full hover:shadow-md transition-all duration-200 hover:border-primary/50 group-hover:bg-slate-50/50">
                     <CardHeader>
@@ -292,4 +292,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

@@ -27,27 +27,36 @@ export class ModuleAccessGuard implements CanActivate {
             (typeof r === 'string' ? r : r.name || '').toLowerCase()
         ) || [];
 
-        // Accesos definidos por defecto. El admin tiene todo.
-        if (userRoles.includes('superadmin') || userRoles.includes('admin') || userRoles.includes('rector') || userRoles.includes('secretaria')) {
-            return true;
-        }
+        // Superadmin, Admin, Rector y Secretaria tienen acceso total (son el núcleo operativo)
+        if (userRoles.includes('superadmin') || 
+            userRoles.includes('admin') || 
+            userRoles.includes('rector') ||
+            userRoles.includes('secretaria') ||
+            userRoles.includes('directivo')) {
+            
+            // Opcionalmente validar configuración de secretaria solo para módulos críticos del sistema
+            if (userRoles.includes('secretaria')) {
+                const criticalModules = ['configuracion', 'usuarios', 'auditoria'];
+                
+                if (criticalModules.includes(requiredModule)) {
+                    const config = await this.prisma.systemConfig.findUnique({
+                        where: { key: 'SECRETARY_MODULES' }
+                    });
 
-        if (userRoles.includes('secretaria')) {
-            const config = await this.prisma.systemConfig.findUnique({
-                where: { key: 'SECRETARY_MODULES' }
-            });
-
-            if (!config) return true; // Si no hay configuracion, asume verdadero
-
-            try {
-                const permissions = JSON.parse(config.value);
-                if (permissions[requiredModule] === false) {
-                    throw new ForbiddenException(`Módulo Desactivado. La Secretaría no tiene autorización para ingresar a ${requiredModule}.`);
+                    if (config) {
+                        try {
+                            const permissions = JSON.parse(config.value);
+                            if (permissions[requiredModule] === false) {
+                                throw new ForbiddenException(`Módulo ${requiredModule} no disponible para Secretaría.`);
+                            }
+                        } catch (e) {
+                            if (e instanceof ForbiddenException) throw e;
+                        }
+                    }
                 }
-            } catch (e) {
-                if (e instanceof ForbiddenException) throw e;
-                return true;
             }
+            
+            return true;
         }
 
         // Pasa por defecto al resto (incluye apoderados, pero ellos estan filtrados por RolesGuard despues)
